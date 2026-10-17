@@ -94,10 +94,28 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Keep appName in sync with settings
+  // Keep appName in sync with settings & verify GitHub status on mount
   useEffect(() => {
     setAppName(settings.appName || 'SiteHub');
     document.title = `${activeSite.name} — ${settings.appName || 'SiteHub'}`;
+
+    // Verify real GitHub connection status with backend
+    GitHubService.checkStatus().then(res => {
+      if (res.isConnected && res.username) {
+        setGithubConnection(prev => ({
+          ...prev,
+          isConnected: true,
+          username: res.username || undefined,
+          avatarUrl: res.avatarUrl || undefined,
+        }));
+      }
+    });
+
+    // Check if returned from redirect flow
+    if (window.location.search.includes('github_connected=1')) {
+      showToast('GitHub account connected successfully!');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [settings, activeSite]);
 
   // Update Site with Undo History

@@ -1,16 +1,186 @@
 /**
  * GitHub Integration & Repository Generator
- * Automatically creates repository structure, commit histories, README.md, and CI/CD workflow.
+ * Communicates with the SiteHub backend for real OAuth authorization,
+ * repository creation, and atomic Git commit synchronization.
  */
 
 import { GitHubConnection, SiteDocument } from '../types/site';
-import { StorageService } from '../lib/storage';
+
+export interface GitHubStatusResponse {
+  isConnected: boolean;
+  isConfigured: boolean;
+  callbackUrl: string;
+  username: string | null;
+  avatarUrl: string | null;
+  name?: string;
+  error?: string;
+}
+
+export interface CreatedRepoResponse {
+  id: number;
+  name: string;
+  fullName: string;
+  owner: string;
+  defaultBranch: string;
+  htmlUrl: string;
+  cloneUrl: string;
+  isPrivate: boolean;
+}
+
+export interface SyncResultResponse {
+  success: boolean;
+  commitSha: string;
+  commitUrl: string;
+  branch: string;
+  filesCount: number;
+  timestamp: string;
+}
 
 export class GitHubService {
+  /**
+   * Check connection status with the backend.
+   */
+  static async checkStatus(): Promise<GitHubStatusResponse> {
+    try {
+      const res = await fetch('/api/github/status');
+      if (!res.ok) {
+        return {
+          isConnected: false,
+          isConfigured: false,
+          callbackUrl: '',
+          username: null,
+          avatarUrl: null,
+          error: `HTTP ${res.status}`,
+        };
+      }
+      return await res.json();
+    } catch (err: any) {
+      return {
+        isConnected: false,
+        isConfigured: false,
+        callbackUrl: '',
+        username: null,
+        avatarUrl: null,
+        error: err.message || 'Network error checking GitHub status',
+      };
+    }
+  }
+
+  /**
+   * Fetch the GitHub OAuth authorize URL from the backend.
+   */
+  static async getAuthUrl(): Promise<{ url: string; state: string; callbackUrl: string }> {
+    const res = await fetch('/api/github/auth-url');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || 'Failed to initialize GitHub OAuth authorization.');
+    }
+    return await res.json();
+  }
+
+  /**
+   * Disconnect the GitHub account.
+   */
+  static async disconnect(): Promise<void> {
+    const res = await fetch('/api/github/disconnect', { method: 'POST' });
+    if (!res.ok) {
+      throw new Error('Failed to disconnect GitHub account.');
+    }
+  }
+
+  /**
+   * List user's GitHub repositories.
+   */
+  static async listRepositories(): Promise<any[]> {
+    const res = await fetch('/api/github/repos');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to list GitHub repositories.');
+    }
+    const data = await res.json();
+    return data.repos || [];
+  }
+
+  /**
+   * Create a new real repository in the user's GitHub account.
+   */
+  static async createRepository(
+    name: string,
+    isPrivate: boolean,
+    description?: string,
+    siteId?: string
+  ): Promise<CreatedRepoResponse> {
+    const res = await fetch('/api/github/repos/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, isPrivate, description, siteId }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create GitHub repository.');
+    }
+
+    const data = await res.json();
+    return data.repository;
+  }
+
+  /**
+   * Synchronize the actual website project files to the GitHub repository.
+   */
+  static async syncFiles(
+    site: SiteDocument,
+    repoOwner: string,
+    repoName: string,
+    commitMessage: string,
+    branch?: string,
+    appName: string = 'SiteHub'
+  ): Promise<SyncResultResponse> {
+    // Generate real project files manifest
+    const files = this.generateFilesMap(site, appName);
+
+    const res = await fetch('/api/github/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repoOwner,
+        repoName,
+        branch,
+        files,
+        commitMessage,
+        siteId: site.id,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to commit and push files to GitHub.');
+    }
+
+    return await res.json();
+  }
+
+  /**
+   * Get sync commit history for a repository.
+   */
+  static async getSyncHistory(repoFullName: string): Promise<any[]> {
+    try {
+      const res = await fetch(`/api/github/sync-history?repoFullName=${encodeURIComponent(repoFullName)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.history || [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Generate project README.md.
+   */
   static generateReadme(site: SiteDocument, appName: string = 'SiteHub'): string {
     return `# ${site.name}
 
-> Generated by **${appName}** — The AI-Powered Website Maker Platform.
+> Generated by **${appName}** — The Production AI Website Maker Platform.
 
 ## 🚀 Overview
 ${site.description}
@@ -26,21 +196,12 @@ ${site.description}
 ├── index.html            # Main HTML5 entry point with SEO metadata
 ├── src/
 │   ├── App.tsx          # Interactive React application
-│   ├── main.tsx         # React DOM hydration
 │   ├── site.json        # Source-of-truth JSON AST document
-│   ├── components/      # Modular responsive UI sections
-│   │   ├── Navbar.tsx
-│   │   ├── Hero.tsx
-│   │   ├── Features.tsx
-│   │   ├── Menu.tsx
-│   │   ├── Booking.tsx
-│   │   ├── Store.tsx
-│   │   └── Footer.tsx
 │   └── styles/
 │       └── globals.css  # Modern Tailwind CSS & Typography tokens
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml   # Automated GitHub Pages / Cloud Run deployment
+│       └── deploy.yml   # Automated GitHub Pages CI/CD deployment
 └── README.md
 \`\`\`
 
@@ -57,7 +218,7 @@ npm install
 npm run dev
 \`\`\`
 
-## 🔒 Security & Secrets
+## 🔒 Security
 All API keys, payment tokens, and environment secrets are managed via ${appName} Secrets Manager and are never committed to this repository.
 
 ---
@@ -65,6 +226,9 @@ All API keys, payment tokens, and environment secrets are managed via ${appName}
 `;
   }
 
+  /**
+   * Generate GitHub Actions CI/CD deployment workflow.
+   */
   static generateWorkflow(site: SiteDocument): string {
     return `name: Deploy ${site.name} to GitHub Pages
 
@@ -111,6 +275,9 @@ jobs:
 `;
   }
 
+  /**
+   * Generate complete project files map for commit upload.
+   */
   static generateFilesMap(site: SiteDocument, appName: string = 'SiteHub'): Record<string, string> {
     return {
       'README.md': this.generateReadme(site, appName),
@@ -158,40 +325,5 @@ jobs:
   </body>
 </html>`,
     };
-  }
-
-  static async commitAndSync(
-    site: SiteDocument,
-    commitMessage: string,
-    appName: string = 'SiteHub'
-  ): Promise<GitHubConnection> {
-    const conn = StorageService.getGitHubConnection();
-    const sha = Math.random().toString(36).substring(2, 9);
-
-    const newCommit = {
-      sha,
-      message: commitMessage || `chore: update ${site.name} via ${appName}`,
-      timestamp: new Date().toISOString(),
-      author: conn.username || 'SiteHub Developer',
-    };
-
-    const updatedConn: GitHubConnection = {
-      ...conn,
-      isConnected: true,
-      username: conn.username || 'developer-studio',
-      repoName: conn.repoName || site.slug,
-      repoUrl: `https://github.com/${conn.username || 'developer-studio'}/${conn.repoName || site.slug}`,
-      lastSyncedAt: new Date().toISOString(),
-      commits: [newCommit, ...(conn.commits || [])],
-    };
-
-    StorageService.setGitHubConnection(updatedConn);
-    StorageService.addLog({
-      level: 'success',
-      source: 'GitHub',
-      message: `Pushed commit [${sha}] to ${updatedConn.repoUrl}: "${commitMessage}"`,
-    });
-
-    return updatedConn;
   }
 }

@@ -5,12 +5,24 @@
 
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
+import cookieParser from 'cookie-parser';
 import { apiRouter } from './server/apiRouter';
+import { getServerConfig, validateEnvironmentAtStartup } from './server/config';
 
 async function startServer() {
   const app = express();
-  const PORT = parseInt(process.env.PORT || '3000', 10);
+  const config = getServerConfig();
+  const PORT = config.port;
 
+  // Validate environment variables at startup
+  const validation = validateEnvironmentAtStartup();
+  if (!validation.valid) {
+    console.warn(`[SiteHub Auth Notice] Missing GitHub credentials: ${validation.missing.join(', ')}.`);
+    console.warn(`[SiteHub Auth Notice] GitHub OAuth will run in unconfigured mode until credentials are set in Render dashboard.`);
+  }
+  validation.warnings.forEach(w => console.warn(`[SiteHub Notice] ${w}`));
+
+  app.use(cookieParser(config.sessionSecret));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -19,7 +31,13 @@ async function startServer() {
 
   // Health endpoint
   app.get('/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      app: config.appName,
+      mode: config.appMode,
+      githubConfigured: config.isGitHubConfigured,
+      time: new Date().toISOString(),
+    });
   });
 
   // Attach Vite middlewares in development
