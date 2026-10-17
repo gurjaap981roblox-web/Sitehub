@@ -6,23 +6,36 @@
 
 import React, { useState } from 'react';
 import {
+  ArrowRight,
+  BarChart3,
+  Bed,
+  BookOpen,
+  Briefcase,
+  Building2,
   Calendar,
   Check,
+  CheckCircle2,
   ChevronDown,
   Clock,
+  Code2,
   ExternalLink,
+  FileText,
   Flame,
   Globe,
+  GraduationCap,
+  Heart,
   Mail,
   MapPin,
   Menu as MenuIcon,
   Phone,
   Plus,
+  Search,
   Send,
   ShoppingBag,
   Sparkles,
   Star,
   Trash2,
+  TrendingUp,
   Users,
   X,
 } from 'lucide-react';
@@ -966,11 +979,482 @@ function renderSectionContent(
         </footer>
       );
 
-    default:
+    case 'dashboardMetrics':
       return (
-        <div className="py-8 px-6 text-center border-dashed border border-neutral-800 text-neutral-500 text-sm">
-          Section type: {section.type} ({section.title})
-        </div>
+        <section id="metrics" className="py-16 px-6 max-w-7xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">{section.title}</h2>
+              {section.subtitle && <p className="text-sm text-neutral-400 mt-1">{section.subtitle}</p>}
+            </div>
+            <div className="flex items-center gap-1.5 p-1 bg-neutral-900 rounded-xl border border-neutral-800 text-xs">
+              {['7D', '30D', '90D', 'YTD'].map((t, idx) => (
+                <button
+                  key={t}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-colors ${idx === 1 ? 'bg-indigo-600 text-white' : 'text-neutral-400 hover:text-white'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              { label: 'Monthly Recurring Revenue', value: '$142,580', change: '+18.4%', isPositive: true },
+              { label: 'Active Enterprise Seats', value: '3,840', change: '+12.1%', isPositive: true },
+              { label: 'Net Revenue Retention', value: '134.2%', change: '+4.8%', isPositive: true },
+              { label: 'Customer Churn Rate', value: '0.62%', change: '-0.18%', isPositive: true },
+            ].map((kpi, idx) => (
+              <div key={idx} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-2">
+                <span className="text-xs text-neutral-400 font-medium">{kpi.label}</span>
+                <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">{kpi.value}</div>
+                <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>{kpi.change} vs last period</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
+            <h3 className="font-bold text-base text-white">Recent Workflows & Transactions</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-neutral-800 text-neutral-500 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="pb-3">Account</th>
+                    <th className="pb-3">Tier Plan</th>
+                    <th className="pb-3">Value</th>
+                    <th className="pb-3">State</th>
+                    <th className="pb-3 text-right">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/80 font-mono">
+                  {[
+                    { account: 'Acme Cloud Corp', tier: 'Enterprise Scale', value: '$12,400/yr', state: 'Active' },
+                    { account: 'Starlight Media', tier: 'Pro Growth', value: '$2,800/yr', state: 'Active' },
+                    { account: 'Apex Genomics', tier: 'Custom Cluster', value: '$48,000/yr', state: 'Provisioning' },
+                  ].map((row, idx) => (
+                    <tr key={idx} className="hover:bg-neutral-800/40">
+                      <td className="py-3 font-sans font-semibold text-white">{row.account}</td>
+                      <td className="py-3 text-neutral-300 font-sans">{row.tier}</td>
+                      <td className="py-3 text-emerald-400 font-bold">{row.value}</td>
+                      <td className="py-3 font-sans">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          {row.state}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right text-neutral-500">Just now</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       );
+
+    case 'crmPipeline':
+      return (
+        <section id="pipeline" className="py-16 px-6 max-w-7xl mx-auto space-y-6">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400 text-sm">{section.subtitle}</p>}
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-4">
+            {[
+              {
+                stage: '1. Inbound Leads',
+                total: '$84,000',
+                deals: [
+                  { name: 'Vanguard Logistics', amount: '$42,000', owner: 'Sarah L.', priority: 'High' },
+                  { name: 'Nexus Data Labs', amount: '$42,000', owner: 'David K.', priority: 'Medium' },
+                ],
+              },
+              {
+                stage: '2. Qualified Discovery',
+                total: '$160,000',
+                deals: [
+                  { name: 'Meridian Capital', amount: '$95,000', owner: 'Sarah L.', priority: 'High' },
+                  { name: 'Helios Robotics', amount: '$65,000', owner: 'Alex M.', priority: 'Medium' },
+                ],
+              },
+              {
+                stage: '3. Proposal Review',
+                total: '$240,000',
+                deals: [
+                  { name: 'Atlas Global Retail', amount: '$180,000', owner: 'David K.', priority: 'Urgent' },
+                  { name: 'Quantica Bio', amount: '$60,000', owner: 'Alex M.', priority: 'High' },
+                ],
+              },
+              {
+                stage: '4. Signed & Closed',
+                total: '$310,000',
+                deals: [
+                  { name: 'Zenith Health AI', amount: '$210,000', owner: 'Sarah L.', priority: 'Won' },
+                  { name: 'Prism Creative', amount: '$100,000', owner: 'David K.', priority: 'Won' },
+                ],
+              },
+            ].map((col, idx) => (
+              <div key={idx} className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+                  <span className="font-bold text-xs text-white">{col.stage}</span>
+                  <span className="font-mono text-xs text-emerald-400 font-bold">{col.total}</span>
+                </div>
+                <div className="space-y-2.5">
+                  {col.deals.map((deal, dIdx) => (
+                    <div
+                      key={dIdx}
+                      className="p-3 rounded-xl bg-neutral-950 border border-neutral-800/90 space-y-1.5 hover:border-indigo-500/50 transition-colors shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-xs">{deal.name}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-mono">
+                          {deal.amount}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                        <span>Lead: {deal.owner}</span>
+                        <span className="text-amber-400 text-[10px] font-semibold">{deal.priority}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+    case 'hotelBooking':
+      return (
+        <section id="hotel-booking" className="py-20 px-6 max-w-7xl mx-auto space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400 text-sm sm:text-base">{section.subtitle}</p>}
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                title: 'Ocean Sanctuary Penthouse',
+                price: '$1,450',
+                beds: '2 King Suites • 2.5 Baths',
+                sqft: '2,800 sq ft',
+                image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80',
+                badge: 'Signature Suite',
+              },
+              {
+                title: 'Private Garden Pool Villa',
+                price: '$980',
+                beds: '1 King Suite • Heated Plunge Pool',
+                sqft: '1,650 sq ft',
+                image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
+                badge: 'Exclusive',
+              },
+              {
+                title: 'Azure Terrace Suite',
+                price: '$620',
+                beds: '1 King Bed • Sunset Balcony',
+                sqft: '950 sq ft',
+                image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80',
+              },
+            ].map((suite, idx) => (
+              <div
+                key={idx}
+                className="group rounded-3xl bg-neutral-900 border border-neutral-800 overflow-hidden flex flex-col justify-between hover:border-neutral-700 transition-all hover:translate-y-[-4px] shadow-2xl"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-neutral-950">
+                  <img
+                    src={suite.image}
+                    alt={suite.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  {suite.badge && (
+                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold bg-neutral-950/80 backdrop-blur-md text-amber-400 border border-neutral-800">
+                      {suite.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold text-white">{suite.title}</h3>
+                    <p className="text-xs text-neutral-400 font-medium">{suite.beds} • {suite.sqft}</p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-800">
+                    <div>
+                      <span className="text-2xl font-bold font-mono text-white">{suite.price}</span>
+                      <span className="text-xs text-neutral-500"> / night</span>
+                    </div>
+                    <button
+                      onClick={() => alert(`Simulated reservation initiated for: ${suite.title}`)}
+                      style={{ backgroundColor: theme.primaryColor }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow hover:opacity-90 transition-opacity"
+                    >
+                      Reserve Suite
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+    case 'courseLessons':
+      return (
+        <section id="lessons" className="py-16 px-6 max-w-6xl mx-auto space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400 text-sm">{section.subtitle}</p>}
+          </div>
+
+          <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-white">Course Progress: 4 of 6 Modules Completed</span>
+              <span className="font-mono text-emerald-400 font-bold">67% Finished</span>
+            </div>
+            <div className="w-full h-2.5 rounded-full bg-neutral-950 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 w-2/3 transition-all" />
+            </div>
+
+            <div className="space-y-2.5 pt-4">
+              {[
+                { title: '01. Distributed Storage Foundations & Raft Consensus', duration: '45 mins', status: 'Completed' },
+                { title: '02. Designing Multi-Region Active-Active Sharding', duration: '60 mins', status: 'Completed' },
+                { title: '03. Zero-Downtime Schema Migrations at Scale', duration: '50 mins', status: 'Current Lesson' },
+                { title: '04. End-to-End Production Verification Exam', duration: '30 mins', status: 'Locked' },
+              ].map((m, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <GraduationCap className={`w-5 h-5 ${m.status === 'Completed' ? 'text-emerald-400' : m.status === 'Current Lesson' ? 'text-indigo-400 animate-pulse' : 'text-neutral-600'}`} />
+                    <div>
+                      <div className="font-bold text-white text-sm">{m.title}</div>
+                      <span className="text-xs text-neutral-500 font-mono">{m.duration}</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                      m.status === 'Completed'
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : m.status === 'Current Lesson'
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                        : 'bg-neutral-900 text-neutral-500'
+                    }`}
+                  >
+                    {m.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+    case 'propertyListings':
+      return (
+        <section id="properties" className="py-20 px-6 max-w-7xl mx-auto space-y-10">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-3xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400">{section.subtitle}</p>}
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                title: 'The Belvedere Glass Pavilion',
+                price: '$4,850,000',
+                location: 'Pacific Palisades, CA',
+                specs: '4 Beds • 5 Baths • 5,400 sq ft',
+                image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+              },
+              {
+                title: 'Penthouse at Summit Spire',
+                price: '$6,200,000',
+                location: 'Tribeca, New York',
+                specs: '3 Beds • 4 Baths • 3,800 sq ft',
+                image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
+              },
+              {
+                title: 'Villa Tranquila Oceanfront',
+                price: '$3,400,000',
+                location: 'Miami Beach, FL',
+                specs: '5 Beds • 6 Baths • 6,200 sq ft',
+                image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80',
+              },
+            ].map((prop, idx) => (
+              <div key={idx} className="rounded-3xl bg-neutral-900 border border-neutral-800 overflow-hidden shadow-2xl flex flex-col justify-between">
+                <div className="aspect-[16/10] bg-neutral-950 overflow-hidden">
+                  <img src={prop.image} alt={prop.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                </div>
+                <div className="p-6 space-y-3">
+                  <div className="text-2xl font-extrabold text-emerald-400 font-mono">{prop.price}</div>
+                  <h3 className="font-bold text-lg text-white">{prop.title}</h3>
+                  <div className="text-xs text-neutral-400 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{prop.location} • {prop.specs}</span>
+                  </div>
+                  <button
+                    onClick={() => alert(`Tour scheduled for ${prop.title}`)}
+                    className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-colors"
+                  >
+                    Schedule In-Person Showing
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+    case 'jobBoard':
+      return (
+        <section id="jobs" className="py-20 px-6 max-w-6xl mx-auto space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-3xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400">{section.subtitle}</p>}
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { role: 'Staff Distributed Systems Architect', comp: '$260k – $320k', team: 'Core Infrastructure', tags: ['Remote', 'Rust / Go', 'Equity'] },
+              { role: 'Lead AI Product Designer', comp: '$180k – $220k', team: 'Design Systems', tags: ['Remote / NYC', 'Figma', 'Prototyping'] },
+              { role: 'Senior Security Operations Lead', comp: '$210k – $250k', team: 'InfoSec & Compliance', tags: ['Remote', 'Zero Trust', 'SOC2'] },
+            ].map((job, idx) => (
+              <div
+                key={idx}
+                className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-neutral-700 transition-colors"
+              >
+                <div className="space-y-1.5">
+                  <h3 className="font-bold text-base text-white">{job.role}</h3>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-neutral-400">{job.team}</span>
+                    <span>•</span>
+                    <span className="font-mono text-emerald-400 font-bold">{job.comp}</span>
+                  </div>
+                  <div className="flex gap-1.5 pt-1">
+                    {job.tags.map(t => (
+                      <span key={t} className="px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-950 text-neutral-400 border border-neutral-800">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={() => alert(`Application modal opened for: ${job.role}`)}
+                  style={{ backgroundColor: theme.primaryColor }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow hover:opacity-90 self-start sm:self-auto"
+                >
+                  Apply Role
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+    case 'newsFeed':
+      return (
+        <section id="news" className="py-20 px-6 max-w-7xl mx-auto space-y-8">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-300 font-medium">
+            <span className="font-bold px-1.5 py-0.5 bg-red-600 text-white rounded text-[10px] uppercase">Breaking</span>
+            <span>Global consortium agrees on decentralized AI safety & verifiable model governance framework.</span>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { title: 'The Quantum Advantage: Next-Gen Compute Shards', time: '5 min read', category: 'Technology', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80' },
+              { title: 'Central Bank Digital Currencies Enter Cross-Border Trial', time: '7 min read', category: 'Global Economics', image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80' },
+              { title: 'Clean Fusion Breakthrough: Q-Total Exceeds 1.8 Factor', time: '4 min read', category: 'Energy Science', image: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=600&q=80' },
+            ].map((article, idx) => (
+              <div key={idx} className="rounded-2xl bg-neutral-900 border border-neutral-800 overflow-hidden flex flex-col justify-between">
+                <div className="aspect-video bg-neutral-950 overflow-hidden">
+                  <img src={article.image} alt={article.title} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                </div>
+                <div className="p-5 space-y-2">
+                  <div className="text-[10px] uppercase font-bold text-red-400">{article.category} • {article.time}</div>
+                  <h3 className="font-bold text-base text-white hover:text-indigo-400 cursor-pointer">{article.title}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+    case 'docViewer':
+      return (
+        <section id="docs" className="py-20 px-6 max-w-6xl mx-auto space-y-6">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-3xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400">{section.subtitle}</p>}
+          </div>
+
+          <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-6 space-y-4 font-mono text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">POST</span>
+                <span className="text-neutral-200">/api/v1/projects/synthesize</span>
+              </div>
+              <span className="text-neutral-500 text-[11px]">Requires Bearer Token</span>
+            </div>
+            <pre className="p-4 rounded-xl bg-neutral-950 text-neutral-300 overflow-x-auto text-[11px]">
+{`curl -X POST https://api.sitehub.live/v1/projects \\
+  -H "Authorization: Bearer sk_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "Build luxury hotel booking website",
+    "theme": "dark_minimal",
+    "deployTarget": "edge"
+  }'`}
+            </pre>
+          </div>
+        </section>
+      );
+
+    case 'donationCampaign':
+      return (
+        <section id="donate" className="py-20 px-6 max-w-4xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold text-white">{section.title}</h2>
+            {section.subtitle && <p className="text-neutral-400">{section.subtitle}</p>}
+          </div>
+
+          <div className="p-8 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-6">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-4xl font-extrabold text-emerald-400 font-mono">$342,850</span>
+                <span className="text-sm text-neutral-400"> raised of $500,000 goal</span>
+              </div>
+              <span className="font-mono font-bold text-white text-lg">68.5%</span>
+            </div>
+            <div className="w-full h-3.5 rounded-full bg-neutral-950 overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full w-[68.5%]" />
+            </div>
+
+            <div className="pt-2 space-y-3">
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Select Contribution Amount</span>
+              <div className="grid grid-cols-4 gap-3">
+                {['$25', '$50', '$100', '$250'].map((amt, idx) => (
+                  <button
+                    key={amt}
+                    onClick={() => alert(`Simulated pledge of ${amt} received!`)}
+                    className={`py-3 rounded-xl font-bold text-sm border transition-colors ${idx === 2 ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-neutral-950 text-neutral-200 border-neutral-800 hover:border-neutral-700'}`}
+                  >
+                    {amt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+
+    default:
+      return null;
   }
 }

@@ -58,6 +58,8 @@ interface DatabaseSchema {
   connections: Record<string, GitHubConnectionRecord>; // keyed by userId
   repos: Record<string, RepoAssociationRecord>; // keyed by siteId
   syncHistory: SyncHistoryRecord[];
+  projects: Record<string, any>;
+  deployments: any[];
 }
 
 export class DatabaseStore {
@@ -81,6 +83,8 @@ export class DatabaseStore {
       connections: {},
       repos: {},
       syncHistory: [],
+      projects: {},
+      deployments: [],
     };
     this.load();
   }
@@ -207,6 +211,33 @@ export class DatabaseStore {
     return this.data.syncHistory
       .filter(s => s.repoFullName.toLowerCase() === repoFullName.toLowerCase())
       .slice(0, 20);
+  }
+
+  // Projects
+  saveProject(project: any): void {
+    if (!this.data.projects) this.data.projects = {};
+    this.data.projects[project.id] = project;
+    this.save();
+  }
+
+  getProject(projectId: string): any | null {
+    if (!this.data.projects) return null;
+    return this.data.projects[projectId] || null;
+  }
+
+  // Deployments
+  recordDeployment(deploy: any): void {
+    if (!this.data.deployments) this.data.deployments = [];
+    this.data.deployments.unshift(deploy);
+    if (this.data.deployments.length > 100) {
+      this.data.deployments = this.data.deployments.slice(0, 100);
+    }
+    this.save();
+  }
+
+  getDeployments(siteId: string): any[] {
+    if (!this.data.deployments) return [];
+    return this.data.deployments.filter((d: any) => d.siteId === siteId).slice(0, 20);
   }
 }
 

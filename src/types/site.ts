@@ -16,7 +16,7 @@ export interface ThemeConfig {
   accentColor: string;
   fontHeading: string;
   fontBody: string;
-  borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+  borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
   shadowScale: 'none' | 'sm' | 'md' | 'lg';
   isDark: boolean;
 }
@@ -35,7 +35,18 @@ export type SectionType =
   | 'contact'
   | 'cta'
   | 'footer'
-  | 'customCode';
+  | 'customCode'
+  | 'dashboardMetrics'
+  | 'crmPipeline'
+  | 'hotelBooking'
+  | 'courseLessons'
+  | 'propertyListings'
+  | 'jobBoard'
+  | 'communityFeed'
+  | 'docViewer'
+  | 'donationCampaign'
+  | 'marketplaceServices'
+  | 'newsFeed';
 
 export interface SectionDocument {
   id: string;
@@ -94,10 +105,23 @@ export interface SiteEnvVar {
   isSecret: boolean;
 }
 
+export interface FullStackSpecification {
+  category: string;
+  architectureType: 'static_site' | 'client_spa' | 'full_stack_app' | 'saas_platform';
+  dataEntities: string[];
+  apiEndpoints: string[];
+  userRoles: string[];
+  authRequired: boolean;
+  dbTablesSuggested?: string[];
+}
+
 export interface SiteDocument {
   id: string;
   name: string;
   slug: string;
+  category?: string;
+  projectType?: 'website' | 'web_app' | 'saas_tool' | 'portal';
+  fullStackSpec?: FullStackSpecification;
   language: LanguageCode;
   title: string;
   description: string;
@@ -109,6 +133,7 @@ export interface SiteDocument {
   environmentVars?: SiteEnvVar[];
   systemInstructions?: string;
   pinnedModel?: string;
+  activeRoute?: string;
   version: number;
   updatedAt: string;
   publishedUrl?: string;
