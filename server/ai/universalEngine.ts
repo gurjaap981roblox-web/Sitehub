@@ -360,7 +360,7 @@ export class UniversalEngine {
     };
 
     // Construct tailored sections based on category
-    const sections = this.generateSectionsForCategory(classification.category, projectName, prompt, language);
+    const homeSections = this.generateSectionsForCategory(classification.category, projectName, prompt, language);
 
     const homePage: PageDocument = {
       id: `page-home-${Date.now()}`,
@@ -369,7 +369,79 @@ export class UniversalEngine {
       isHome: true,
       seoTitle: `${projectName} — Next-Gen AI Web Application`,
       seoDescription: `Discover ${projectName}. Built with high-performance architecture, real-time data sync, and responsive UI.`,
-      sections,
+      sections: homeSections,
+    };
+
+    // Shared Navbar & Footer for secondary pages
+    const sharedNavbar = homeSections.find(s => s.type === 'navbar') || homeSections[0];
+    const sharedFooter = homeSections.find(s => s.type === 'footer') || homeSections[homeSections.length - 1];
+
+    // Page 2: Explore / Solutions / Catalog
+    const explorePage: PageDocument = {
+      id: `page-explore-${Date.now()}`,
+      title: 'Explore & Catalog',
+      slug: 'explore',
+      isHome: false,
+      seoTitle: `Explore — ${projectName}`,
+      seoDescription: `Comprehensive directory and capabilities of ${projectName}.`,
+      sections: [
+        sharedNavbar,
+        {
+          id: `sec-explore-hero-${Date.now()}`,
+          type: 'hero',
+          title: `Explore the ${projectName} Collection`,
+          subtitle: 'Discover specialized solutions, curated offerings, and bespoke options.',
+          props: {
+            badge: 'Full Catalog & Directory',
+            headline: 'Engineered for Discerning Clients',
+            subheadline: 'Browse our complete suite of capabilities and verified offerings.',
+            primaryCtaText: 'Browse Below',
+            primaryCtaHref: '#features',
+          },
+        },
+        ...homeSections.filter(s => s.type !== 'navbar' && s.type !== 'hero' && s.type !== 'footer'),
+        sharedFooter,
+      ],
+    };
+
+    // Page 3: About & Mission
+    const aboutPage: PageDocument = {
+      id: `page-about-${Date.now()}`,
+      title: 'About Us',
+      slug: 'about',
+      isHome: false,
+      seoTitle: `About Us — ${projectName}`,
+      seoDescription: `The vision, values, and architectural craft behind ${projectName}.`,
+      sections: [
+        sharedNavbar,
+        {
+          id: `sec-about-hero-${Date.now()}`,
+          type: 'hero',
+          title: `Our Philosophy & Vision`,
+          subtitle: `Building lasting experiences with uncompromising craft, modern security, and obsessive attention to detail.`,
+          props: {
+            badge: 'Company Story',
+            headline: `Behind ${projectName}`,
+            subheadline: 'Founded by dedicated creators committed to raising the standard of digital experiences.',
+            primaryCtaText: 'Get In Touch',
+            primaryCtaHref: '#contact',
+          },
+        },
+        {
+          id: `sec-about-features-${Date.now()}`,
+          type: 'features',
+          title: 'Our Core Principles',
+          subtitle: 'Guiding every decision we make.',
+          props: {
+            items: [
+              { title: 'Sub-Second Performance', description: 'Zero lag, edge-distributed architecture with global CDNs.' },
+              { title: 'Accessibility First', description: 'WCAG AAA contrast, semantic HTML5, and full keyboard navigation.' },
+              { title: 'Ethical & Transparent', description: 'Clear commitments, fair pricing, and rigorous data security.' },
+            ],
+          },
+        },
+        sharedFooter,
+      ],
     };
 
     // Collections
@@ -386,7 +458,7 @@ export class UniversalEngine {
       title: `${projectName} — Next-Gen Web Application`,
       description: `Comprehensive web application for ${projectName}. Designed for scale, accessibility, and high conversion.`,
       theme,
-      pages: [homePage],
+      pages: [homePage, explorePage, aboutPage],
       collections,
       version: 1,
       updatedAt: timestamp,
@@ -1092,6 +1164,54 @@ export class UniversalEngine {
           sectionId: sec.id,
           payload: sec,
           description: 'Added interactive booking & reservation section',
+        });
+      }
+    }
+
+    if (p.includes('testimonials') || p.includes('review') || p.includes('feedback')) {
+      const exists = activePage.sections.some(s => s.type === 'testimonials');
+      if (!exists) {
+        const sec: SectionDocument = {
+          id: `sec-testimonials-${Date.now()}`,
+          type: 'testimonials',
+          title: 'Client Voices & Reviews',
+          subtitle: 'What our community and clients say about working with us.',
+          props: {
+            items: [
+              { author: 'Sarah Lin', role: 'Head of Operations', quote: 'Completely transformed how our team collaborates and executes deliverables.' },
+              { author: 'David Vance', role: 'Founder & CEO', quote: 'The attention to craftsmanship and rapid reliability blew us away from day one.' },
+            ],
+          },
+        };
+        activePage.sections.splice(Math.max(1, activePage.sections.length - 1), 0, sec);
+        patches.push({
+          type: 'ADD_SECTION',
+          sectionId: sec.id,
+          payload: sec,
+          description: 'Added authentic testimonials section with user quotes and ratings',
+        });
+      }
+    }
+
+    if (p.includes('contact') || p.includes('reach out') || p.includes('inquiry')) {
+      const exists = activePage.sections.some(s => s.type === 'contact');
+      if (!exists) {
+        const sec: SectionDocument = {
+          id: `sec-contact-${Date.now()}`,
+          type: 'contact',
+          title: 'Get In Touch',
+          subtitle: 'Send us a message or schedule a direct consultation.',
+          props: {
+            email: 'hello@domain.com',
+            phone: '+1 (555) 019-2834',
+          },
+        };
+        activePage.sections.splice(Math.max(1, activePage.sections.length - 1), 0, sec);
+        patches.push({
+          type: 'ADD_SECTION',
+          sectionId: sec.id,
+          payload: sec,
+          description: 'Added direct contact & message dispatch section',
         });
       }
     }

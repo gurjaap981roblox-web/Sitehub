@@ -41,16 +41,80 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
   appName = 'SiteHub',
   currentLang,
 }) => {
+  const [activePageId, setActivePageId] = useState<string>(site.pages[0]?.id || 'page-home');
+  const activePage = site.pages.find(p => p.id === activePageId || p.slug === activePageId) || site.pages[0];
   const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(
-    site.pages[0]?.sections[1]?.id || site.pages[0]?.sections[0]?.id
+    activePage?.sections[1]?.id || activePage?.sections[0]?.id
   );
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 
+  // New Page Modal State
+  const [isAddPageOpen, setIsAddPageOpen] = useState(false);
+  const [newPageTitle, setNewPageTitle] = useState('');
+  const [newPageSlug, setNewPageSlug] = useState('');
+
   const t = translations[currentLang] || translations.en;
-  const activePage = site.pages[0];
   const selectedSection = activePage?.sections.find(s => s.id === selectedSectionId);
+
+  // Page Management Handlers
+  const handleAddPage = (title: string, slug?: string) => {
+    if (!title.trim()) return;
+    const cleanSlug = (slug || title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
+
+    const sharedNavbar = cloned.pages[0]?.sections.find(s => s.type === 'navbar');
+    const sharedFooter = cloned.pages[0]?.sections.find(s => s.type === 'footer');
+
+    const newPage = {
+      id: `page-${Date.now()}`,
+      title: title.trim(),
+      slug: cleanSlug || `page-${Date.now()}`,
+      isHome: false,
+      sections: [
+        sharedNavbar ? JSON.parse(JSON.stringify(sharedNavbar)) : {
+          id: `sec-nav-${Date.now()}`,
+          type: 'navbar' as SectionType,
+          title: site.name,
+          props: { brandName: site.name },
+        },
+        {
+          id: `sec-hero-${Date.now()}`,
+          type: 'hero' as SectionType,
+          title: title.trim(),
+          subtitle: `Explore the ${title.trim()} section of ${site.name}.`,
+          props: { headline: title.trim(), primaryCtaText: 'Learn More' },
+        },
+        sharedFooter ? JSON.parse(JSON.stringify(sharedFooter)) : {
+          id: `sec-footer-${Date.now()}`,
+          type: 'footer' as SectionType,
+          title: 'Footer',
+          props: { copyright: `© ${new Date().getFullYear()} ${site.name}` },
+        },
+      ],
+    };
+
+    cloned.pages.push(newPage);
+    cloned.version += 1;
+    onUpdateSite(cloned);
+    setActivePageId(newPage.id);
+    setSelectedSectionId(newPage.sections[1]?.id);
+    setIsAddPageOpen(false);
+    setNewPageTitle('');
+    setNewPageSlug('');
+  };
+
+  const handleDeletePage = (pageId: string) => {
+    if (site.pages.length <= 1) return;
+    const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
+    cloned.pages = cloned.pages.filter(p => p.id !== pageId);
+    cloned.version += 1;
+    onUpdateSite(cloned);
+    const fallbackId = cloned.pages[0]?.id || 'page-home';
+    setActivePageId(fallbackId);
+    setSelectedSectionId(cloned.pages[0]?.sections[0]?.id);
+  };
 
   // Section Reordering
   const handleMoveSection = (sectionId: string, direction: 'up' | 'down') => {
@@ -62,9 +126,9 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
     if (targetIndex < 0 || targetIndex >= activePage.sections.length) return;
 
     const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
-    const sections = cloned.pages[0].sections;
-    const [moved] = sections.splice(index, 1);
-    sections.splice(targetIndex, 0, moved);
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
+    const [moved] = targetPage.sections.splice(index, 1);
+    targetPage.sections.splice(targetIndex, 0, moved);
 
     cloned.version += 1;
     onUpdateSite(cloned);
@@ -74,16 +138,18 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
   const handleDeleteSection = (sectionId: string) => {
     if (!activePage) return;
     const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
-    cloned.pages[0].sections = cloned.pages[0].sections.filter(s => s.id !== sectionId);
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
+    targetPage.sections = targetPage.sections.filter(s => s.id !== sectionId);
     cloned.version += 1;
     onUpdateSite(cloned);
-    setSelectedSectionId(cloned.pages[0].sections[0]?.id);
+    setSelectedSectionId(targetPage.sections[0]?.id);
   };
 
   // Toggle Section Visibility
   const handleToggleVisibility = (sectionId: string) => {
     const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
-    const target = cloned.pages[0].sections.find(s => s.id === sectionId);
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
+    const target = targetPage.sections.find(s => s.id === sectionId);
     if (target) {
       target.isHidden = !target.isHidden;
       onUpdateSite(cloned);
@@ -94,7 +160,8 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
   const handleUpdateSectionTitle = (newTitle: string) => {
     if (!selectedSectionId) return;
     const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
-    const target = cloned.pages[0].sections.find(s => s.id === selectedSectionId);
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
+    const target = targetPage.sections.find(s => s.id === selectedSectionId);
     if (target) {
       target.title = newTitle;
       onUpdateSite(cloned);
@@ -104,7 +171,8 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
   const handleUpdateSectionSubtitle = (newSubtitle: string) => {
     if (!selectedSectionId) return;
     const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
-    const target = cloned.pages[0].sections.find(s => s.id === selectedSectionId);
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
+    const target = targetPage.sections.find(s => s.id === selectedSectionId);
     if (target) {
       target.subtitle = newSubtitle;
       onUpdateSite(cloned);
@@ -114,6 +182,7 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
   // Add Section Generator
   const handleAddSection = (type: SectionType) => {
     const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
     const newId = `sec-${type}-${Date.now()}`;
     let newSection: SectionDocument = {
       id: newId,
@@ -125,7 +194,7 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
     if (type === 'hero') {
       newSection.title = 'Transform Your Digital Presence';
       newSection.subtitle = 'Designed with craft and precision.';
-      newSection.props = { primaryCta: 'Get Started', secondaryCta: 'Learn More' };
+      newSection.props = { primaryCtaText: 'Get Started', secondaryCtaText: 'Learn More' };
     } else if (type === 'features') {
       newSection.title = 'Core Capabilities';
       newSection.props = {
@@ -137,9 +206,9 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
     } else if (type === 'pricing') {
       newSection.title = 'Simple Pricing Plans';
       newSection.props = {
-        plans: [
+        tiers: [
           { name: 'Starter', price: '$19', period: '/mo', features: ['Core Features', 'Community Support'] },
-          { name: 'Pro', price: '$49', period: '/mo', isPopular: true, features: ['Unlimited Sites', 'Priority Support'] },
+          { name: 'Pro', price: '$49', period: '/mo', isPopular: true, features: ['Unlimited Access', 'Priority Support'] },
         ],
       };
     } else if (type === 'booking') {
@@ -156,14 +225,14 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
     } else if (type === 'faq') {
       newSection.title = 'Frequently Asked Questions';
       newSection.props = {
-        items: [{ question: 'What is included?', answer: 'Everything needed to launch right away.' }],
+        items: [{ q: 'What is included?', a: 'Everything needed to launch right away.' }],
       };
     } else if (type === 'contact') {
       newSection.title = 'Get in Touch';
       newSection.props = { submitLabel: 'Send Inquiry' };
     }
 
-    cloned.pages[0].sections.splice(Math.max(1, cloned.pages[0].sections.length - 1), 0, newSection);
+    targetPage.sections.splice(Math.max(1, targetPage.sections.length - 1), 0, newSection);
     cloned.version += 1;
     onUpdateSite(cloned);
     setSelectedSectionId(newId);

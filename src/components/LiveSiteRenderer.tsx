@@ -48,6 +48,8 @@ interface LiveSiteRendererProps {
   onSelectSection?: (sectionId: string) => void;
   appName?: string;
   isPreview?: boolean;
+  activePageId?: string;
+  onNavigatePage?: (pageIdOrSlug: string) => void;
 }
 
 export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
@@ -56,9 +58,30 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
   onSelectSection,
   appName = 'SiteHub',
   isPreview = true,
+  activePageId,
+  onNavigatePage,
 }) => {
-  const activePage = site.pages[0];
+  const [internalPageId, setInternalPageId] = useState<string>(activePageId || site.pages[0]?.id || 'page-home');
+  const effectivePageId = activePageId || internalPageId;
+  const activePage =
+    site.pages.find(p => p.id === effectivePageId || p.slug === effectivePageId) ||
+    site.pages[0] ||
+    { id: 'page-home', sections: [], title: 'Home', slug: 'home', isHome: true };
   const theme = site.theme;
+
+  const handlePageNavigation = (target: string) => {
+    const clean = target.replace(/^[#/]+/, '');
+    const foundPage = site.pages.find(
+      p => p.slug === clean || p.id === target || p.title.toLowerCase() === clean.toLowerCase()
+    );
+    if (foundPage) {
+      setInternalPageId(foundPage.id);
+      if (onNavigatePage) onNavigatePage(foundPage.id);
+    } else if (target.startsWith('#')) {
+      const el = document.getElementById(target.slice(1));
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   // Store & Cart State
   const [cart, setCart] = useState<Array<{ id: string; name: string; price: number; quantity: number }>>([]);
@@ -246,7 +269,8 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
                 setOpenFaqIndex,
                 isMobileNavOpen,
                 setIsMobileNavOpen,
-                triggerFeedback
+                triggerFeedback,
+                handlePageNavigation
               )}
             </div>
           );
@@ -386,7 +410,8 @@ function renderSectionContent(
   setOpenFaqIndex: (i: number | null) => void,
   isMobileNavOpen: boolean,
   setIsMobileNavOpen: (o: boolean) => void,
-  triggerFeedback?: (msg: string) => void
+  triggerFeedback?: (msg: string) => void,
+  onNavigatePage?: (target: string) => void
 ) {
   const props = section.props || {};
 
@@ -395,7 +420,16 @@ function renderSectionContent(
       return (
         <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-neutral-950/80 border-b border-neutral-800/80 px-6 py-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <a href="#hero" className="font-extrabold text-xl tracking-tight flex items-center gap-2">
+            <a
+              href="#hero"
+              onClick={e => {
+                if (onNavigatePage) {
+                  e.preventDefault();
+                  onNavigatePage('home');
+                }
+              }}
+              className="font-extrabold text-xl tracking-tight flex items-center gap-2 cursor-pointer"
+            >
               <span style={{ color: theme.primaryColor }}>●</span>
               <span>{props.brandName || site.name}</span>
             </a>
@@ -403,7 +437,17 @@ function renderSectionContent(
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-300">
               {props.links?.map((link: any, i: number) => (
-                <a key={i} href={link.href} className="hover:text-white transition-colors">
+                <a
+                  key={i}
+                  href={link.href}
+                  onClick={e => {
+                    if (onNavigatePage && link.href) {
+                      e.preventDefault();
+                      onNavigatePage(link.href);
+                    }
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer"
+                >
                   {link.label}
                 </a>
               ))}
@@ -424,8 +468,14 @@ function renderSectionContent(
               {props.ctaText && (
                 <a
                   href={props.ctaHref || '#'}
+                  onClick={e => {
+                    if (onNavigatePage && props.ctaHref && !props.ctaHref.startsWith('http')) {
+                      e.preventDefault();
+                      onNavigatePage(props.ctaHref);
+                    }
+                  }}
                   style={{ backgroundColor: theme.primaryColor }}
-                  className="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-md hover:opacity-90 transition-all"
+                  className="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-md hover:opacity-90 transition-all cursor-pointer"
                 >
                   {props.ctaText}
                 </a>
@@ -444,8 +494,14 @@ function renderSectionContent(
                 <a
                   key={i}
                   href={link.href}
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-neutral-300 hover:bg-neutral-800"
+                  onClick={e => {
+                    setIsMobileNavOpen(false);
+                    if (onNavigatePage && link.href) {
+                      e.preventDefault();
+                      onNavigatePage(link.href);
+                    }
+                  }}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-neutral-300 hover:bg-neutral-800 cursor-pointer"
                 >
                   {link.label}
                 </a>

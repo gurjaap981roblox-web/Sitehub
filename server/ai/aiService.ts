@@ -68,8 +68,30 @@ export class AiService {
   ): Promise<{ success: boolean; latencyMs: number; message: string }> {
     const startTime = performance.now();
     try {
+      const getEffectiveKey = (providerName: string, inputKey: string): string => {
+        if (inputKey && inputKey !== 'configured_in_environment' && !inputKey.startsWith('•')) {
+          return inputKey;
+        }
+        if (providerName === 'gemini' || providerName === 'google') return process.env.GEMINI_API_KEY || '';
+        if (providerName.includes('nemotron') || providerName === 'nvidia') return process.env.NEMOTRON_API_KEY || '';
+        if (providerName.includes('kira')) return process.env.KIRA_CODE_API_KEY || process.env.KIRA_API_KEY || '';
+        if (providerName === 'openai') return process.env.OPENAI_API_KEY || '';
+        if (providerName === 'deepseek') return process.env.DEEPSEEK_API_KEY || '';
+        return '';
+      };
+
+      const effectiveKey = getEffectiveKey(provider, key);
+
+      if (!effectiveKey) {
+        return {
+          success: false,
+          latencyMs: 0,
+          message: `No active API key found for ${provider}. Add key in Secrets Manager or set server environment variable.`,
+        };
+      }
+
       if (provider === 'gemini' || provider === 'google') {
-        const ai = new GoogleGenAI({ apiKey: key });
+        const ai = new GoogleGenAI({ apiKey: effectiveKey });
         const resp = await ai.models.generateContent({
           model: 'gemini-3.8-flash',
           contents: 'ping',
@@ -83,7 +105,7 @@ export class AiService {
 
       if (provider === 'nemotron-ultra' || provider === 'nemotron' || provider === 'nvidia') {
         const resp = await fetch('https://integrate.api.nvidia.com/v1/models', {
-          headers: { Authorization: `Bearer ${key}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latencyMs = Math.round(performance.now() - startTime);
@@ -95,7 +117,7 @@ export class AiService {
 
       if (provider.includes('kira')) {
         const resp = await fetch('https://api.kiraai.vn/v1/models', {
-          headers: { Authorization: `Bearer ${key}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latencyMs = Math.round(performance.now() - startTime);
@@ -107,7 +129,7 @@ export class AiService {
 
       if (provider === 'openai') {
         const resp = await fetch('https://api.openai.com/v1/models', {
-          headers: { Authorization: `Bearer ${key}` },
+          headers: { Authorization: `Bearer ${effectiveKey}` },
           signal: AbortSignal.timeout(6000),
         });
         const latencyMs = Math.round(performance.now() - startTime);

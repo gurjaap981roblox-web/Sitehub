@@ -40,6 +40,7 @@ import { STARTER_TEMPLATES } from './lib/templates';
 import { translations } from './lib/translations';
 import { AiRouterService, GenerationStep } from './services/aiRouter';
 import { GitHubService } from './services/githubService';
+import JSZip from 'jszip';
 
 import { TopNav } from './components/TopNav';
 import { LeftPanel } from './components/LeftPanel';
@@ -246,17 +247,21 @@ export default function App() {
       a.click();
       showToast('Exported standalone HTML file');
     } else if (format === 'zip') {
-      // Create a plain-text combined bundle that users can unzip or view
-      const combined = Object.entries(files)
-        .map(([filename, content]) => `=== FILE: ${filename} ===\n${content}\n\n`)
-        .join('\n');
-      const blob = new Blob([combined], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activeSite.slug}-bundle.txt`;
-      a.click();
-      showToast('Exported complete project source package');
+      const zip = new JSZip();
+      Object.entries(files).forEach(([filename, content]) => {
+        zip.file(filename, content);
+      });
+      zip.generateAsync({ type: 'blob' }).then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${activeSite.slug}-source.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Exported complete project ZIP archive');
+      }).catch(err => {
+        showToast(`Export ZIP failed: ${err.message}`);
+      });
     }
   };
 

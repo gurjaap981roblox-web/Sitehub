@@ -1,6 +1,6 @@
 {
   "name": "SiteHub",
-  "description": "Production-grade AI website maker platform with multi-model routing, visual editor, code studio, secrets manager, and GitHub sync.",
+  "description": "SiteHub — Your AI Website Studio. Describe it. Build it. Launch it. Full-stack AI website maker platform with multi-model routing, visual editor, code studio, and GitHub sync.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
