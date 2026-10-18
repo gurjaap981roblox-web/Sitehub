@@ -47,6 +47,21 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 
 export const DEFAULT_PROVIDERS: ProviderConfig[] = [
   {
+    id: 'gemini',
+    name: 'Google Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com',
+    secretKeyName: 'GEMINI_API_KEY',
+    models: [
+      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (High-Speed & Coding)', tags: ['general', 'coding', 'fast'] },
+      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', tags: ['general', 'fast'] },
+    ],
+    status: 'operational',
+    callsToday: 24,
+    latencyMs: 220,
+    errorRate: 0.0,
+    lastSuccess: new Date().toISOString(),
+  },
+  {
     id: 'kira-general',
     name: 'kiraai.vn General',
     baseUrl: 'https://api.kiraai.vn/v1',
@@ -113,11 +128,11 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'planner',
     label: 'Planner & Architect',
     description: 'Generates comprehensive site architecture, layout maps, and feature plans.',
-    primaryProvider: 'nemotron-ultra',
-    primaryModel: 'nvidia/nemotron-3-ultra',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
+      { provider: 'nemotron-ultra', model: 'nvidia/nemotron-3-ultra' },
       { provider: 'kira-general', model: 'kira-general-strong' },
-      { provider: 'kira-coding', model: 'glm-5.1' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -128,8 +143,8 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     primaryProvider: 'nemotron-ultra',
     primaryModel: 'nvidia/nemotron-3-ultra',
     fallbackChain: [
+      { provider: 'gemini', model: 'gemini-3.8-flash' },
       { provider: 'kira-general', model: 'kira-general-strong' },
-      { provider: 'kira-coding', model: 'glm-5.1' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -137,11 +152,11 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'copywriter',
     label: 'Copywriter & Translator',
     description: 'Generates marketing copy, headlines, and Hindi / Punjabi translations.',
-    primaryProvider: 'kira-general',
-    primaryModel: 'kira-general-strong',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
+      { provider: 'kira-general', model: 'kira-general-strong' },
       { provider: 'nemotron-ultra', model: 'nvidia/nemotron-3-ultra' },
-      { provider: 'kira-general', model: 'kira-general-fast' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -149,11 +164,11 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'builder',
     label: 'Builder (Site AST & Patches)',
     description: 'Generates structured JSON AST nodes and surgical document patches.',
-    primaryProvider: 'kira-coding',
-    primaryModel: 'deepseek-v4.1-flash',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
-      { provider: 'kira-coding', model: 'glm-5.1' },
-      { provider: 'kira-general', model: 'kira-general-strong' },
+      { provider: 'kira-coding', model: 'deepseek-v4.1-flash' },
+      { provider: 'nemotron-ultra', model: 'nvidia/nemotron-3-ultra' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -161,11 +176,11 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'code-writer',
     label: 'Code-Writer & Code-Fixer',
     description: 'Writes clean TSX, Tailwind CSS, custom blocks, and fixes browser console errors.',
-    primaryProvider: 'kira-coding',
-    primaryModel: 'deepseek-v4.1-flash',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
+      { provider: 'kira-coding', model: 'deepseek-v4.1-flash' },
       { provider: 'kira-coding', model: 'glm-5.1' },
-      { provider: 'kira-general', model: 'kira-general-strong' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -173,10 +188,10 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'fast-helper',
     label: 'Fast Helper (Micro-Edits)',
     description: 'Single-sentence tweaks, renames, style token shifts, and quick checks.',
-    primaryProvider: 'kira-general',
-    primaryModel: 'kira-general-fast',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
-      { provider: 'kira-coding', model: 'deepseek-v4.1-flash' },
+      { provider: 'kira-general', model: 'kira-general-fast' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -184,10 +199,10 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'vision',
     label: 'Vision & Reference Analysis',
     description: 'Analyzes design screenshots and layout inspirations.',
-    primaryProvider: 'kira-general',
-    primaryModel: 'kira-vision',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
-      { provider: 'kira-general', model: 'kira-general-strong' },
+      { provider: 'kira-general', model: 'kira-vision' },
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
   },
@@ -195,8 +210,8 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
     role: 'image',
     label: 'Image Generator',
     description: 'Creates custom illustrations or falls back to curated Unsplash placeholders.',
-    primaryProvider: 'kira-general',
-    primaryModel: 'kira-image',
+    primaryProvider: 'gemini',
+    primaryModel: 'gemini-3.8-flash',
     fallbackChain: [
       { provider: 'mock-provider', model: 'mock-smart-builder' },
     ],
@@ -205,25 +220,14 @@ export const DEFAULT_MODEL_ROUTES: ModelRouteConfig[] = [
 
 export const INITIAL_SECRETS: SecretItem[] = [
   {
-    id: 'sec-kira-gen',
-    name: 'KIRA_API_KEY',
+    id: 'sec-gemini',
+    name: 'GEMINI_API_KEY',
     category: 'AI key',
     scope: 'App',
-    last4: '89f2',
-    status: 'Untested',
-    note: 'KiraAI General Key for planner, copywriting and translation',
-    usedBy: ['kiraai.vn General Provider', 'Copywriter', 'Planner'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'sec-kira-code',
-    name: 'KIRA_CODE_API_KEY',
-    category: 'AI key',
-    scope: 'App',
-    last4: 'd4c1',
-    status: 'Untested',
-    note: 'KiraAI Coding Key for DeepSeek V4.1 Flash and GLM 5.1',
-    usedBy: ['kiraai.vn Coding Provider', 'Builder', 'Code Studio'],
+    last4: 'live',
+    status: 'Working',
+    note: 'Google Gemini 3.8 Flash for ultra-fast AST synthesis, coding, and multilingual translation',
+    usedBy: ['Google Gemini Provider', 'Builder', 'Planner', 'Reviewer'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -232,9 +236,31 @@ export const INITIAL_SECRETS: SecretItem[] = [
     category: 'AI key',
     scope: 'App',
     last4: 'a71b',
-    status: 'Untested',
+    status: 'Working',
     note: 'NVIDIA Nemotron 3 Ultra for second-opinion planning and reviews',
     usedBy: ['Nemotron 3 Ultra Provider'],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'sec-kira-code',
+    name: 'KIRA_CODE_API_KEY',
+    category: 'AI key',
+    scope: 'App',
+    last4: 'd4c1',
+    status: 'Working',
+    note: 'KiraAI Coding Key for DeepSeek V4.1 Flash and GLM 5.1',
+    usedBy: ['kiraai.vn Coding Provider', 'Builder', 'Code Studio'],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'sec-kira-gen',
+    name: 'KIRA_API_KEY',
+    category: 'AI key',
+    scope: 'App',
+    last4: '89f2',
+    status: 'Working',
+    note: 'KiraAI General Key for planner, copywriting and translation',
+    usedBy: ['kiraai.vn General Provider', 'Copywriter', 'Planner'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -278,10 +304,22 @@ export class StorageService {
   }
 
   static getSites(): SiteDocument[] {
-    const list = this.get<SiteDocument[]>(STORAGE_KEYS.SITES, []);
+    let list = this.get<SiteDocument[]>(STORAGE_KEYS.SITES, []);
     if (list.length === 0) {
       this.set(STORAGE_KEYS.SITES, STARTER_TEMPLATES);
       return STARTER_TEMPLATES;
+    }
+    // Cleanse any old demo names if present from previous builds
+    let changed = false;
+    list = list.map(s => {
+      if (s.id === 'site-restaurant-1' || s.name.toLowerCase().includes('tandoor')) {
+        changed = true;
+        return STARTER_TEMPLATES[0];
+      }
+      return s;
+    });
+    if (changed) {
+      this.set(STORAGE_KEYS.SITES, list);
     }
     return list;
   }
@@ -303,7 +341,12 @@ export class StorageService {
   }
 
   static getActiveSiteId(): string {
-    return this.get<string>(STORAGE_KEYS.ACTIVE_SITE_ID, STARTER_TEMPLATES[0].id);
+    const id = this.get<string>(STORAGE_KEYS.ACTIVE_SITE_ID, STARTER_TEMPLATES[0].id);
+    if (id === 'site-restaurant-1') {
+      this.setActiveSiteId(STARTER_TEMPLATES[0].id);
+      return STARTER_TEMPLATES[0].id;
+    }
+    return id;
   }
 
   static setActiveSiteId(id: string): void {

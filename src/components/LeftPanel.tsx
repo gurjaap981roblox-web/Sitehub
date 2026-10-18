@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Sliders,
   Sparkles,
+  X,
   Zap,
 } from 'lucide-react';
 import { LanguageCode, SiteDocument } from '../types/site';
@@ -33,6 +34,7 @@ interface LeftPanelProps {
   onRunPrompt: (prompt: string, model: string) => Promise<void>;
   loopWarning: string | null;
   onClearLoopWarning: () => void;
+  onCloseMobile?: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -44,6 +46,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onRunPrompt,
   loopWarning,
   onClearLoopWarning,
+  onCloseMobile,
 }) => {
   const [promptText, setPromptText] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('auto');
@@ -80,31 +83,44 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   };
 
   return (
-    <aside className="w-80 md:w-96 bg-neutral-900 border-r border-neutral-800 flex flex-col justify-between shrink-0 h-full overflow-hidden">
+    <aside className="w-full md:w-80 lg:w-96 bg-neutral-900 border-r border-neutral-800 flex flex-col justify-between shrink-0 h-full overflow-hidden">
       {/* Top Header */}
-      <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
+      <div className="p-4 border-b border-neutral-800 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-400" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+          <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300 truncate">
             AI Architect & Builder
           </h2>
         </div>
 
-        {/* Model Picker */}
-        <div className="relative">
-          <select
-            value={selectedModel}
-            onChange={e => setSelectedModel(e.target.value)}
-            disabled={isGenerating}
-            className="text-xs bg-neutral-950 border border-neutral-800 rounded-lg px-2.5 py-1 text-neutral-300 focus:outline-none focus:border-indigo-500 font-medium"
-          >
-            <option value="auto">⚡ Auto (Smart Router)</option>
-            <option value="deepseek">DeepSeek V4.1 Flash (Coding Fast)</option>
-            <option value="glm">GLM 5.1 (Stronger Coding)</option>
-            <option value="nemotron">Nemotron 3 Ultra (Planner)</option>
-            <option value="general">Kira General Strong</option>
-            <option value="mock">Built-in Mock AI (Free / Offline)</option>
-          </select>
+        <div className="flex items-center gap-1.5">
+          {/* Model Picker */}
+          <div className="relative">
+            <select
+              value={selectedModel}
+              onChange={e => setSelectedModel(e.target.value)}
+              disabled={isGenerating}
+              className="text-xs bg-neutral-950 border border-neutral-800 rounded-lg px-2.5 py-1 text-neutral-300 focus:outline-none focus:border-indigo-500 font-medium"
+            >
+              <option value="auto">⚡ Auto (Smart Router)</option>
+              <option value="gemini">Google Gemini 3.8 Flash (High-Speed & Code)</option>
+              <option value="nemotron">Nemotron 3 Ultra (Architecture & Planner)</option>
+              <option value="deepseek">DeepSeek V4.1 Flash (Coding Fast)</option>
+              <option value="glm">GLM 5.1 (Stronger Coding)</option>
+              <option value="general">Kira General Strong</option>
+              <option value="mock">Built-in Mock AI (Free / Offline)</option>
+            </select>
+          </div>
+
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="md:hidden p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"
+              title="Close panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

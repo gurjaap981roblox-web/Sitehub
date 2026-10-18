@@ -15,6 +15,7 @@ import {
 } from './security/encryption';
 import { db, SessionRecord } from './storage/db';
 import { GitHubApiClient, validateRepoName } from './github/githubApi';
+import { AiService } from './ai/aiService';
 
 export const apiRouter = Router();
 
@@ -484,8 +485,56 @@ apiRouter.get('/github/sync-history', (req, res) => {
 });
 
 // ==========================================
-// Existing SiteHub Endpoints (Preserved)
+// AI Generation & Execution Endpoints
 // ==========================================
+
+apiRouter.post('/ai/generate', async (req, res) => {
+  try {
+    const { prompt, currentSite, selectedModel, systemInstructions, clientKeys } = req.body;
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'Missing prompt parameter.' });
+    }
+
+    const result = await AiService.generate({
+      prompt,
+      currentSite,
+      selectedModel,
+      systemInstructions,
+      clientKeys,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[AI Generation Error]', error);
+    res.status(500).json({ error: error.message || 'AI generation failed.' });
+  }
+});
+
+apiRouter.post('/ai/test-key', async (req, res) => {
+  try {
+    const { provider, key } = req.body;
+    if (!provider || !key) {
+      return res.status(400).json({ error: 'Provider and key are required.' });
+    }
+
+    const result = await AiService.testKey(provider, key);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+apiRouter.get('/ai/status', (req, res) => {
+  res.json({
+    gemini: Boolean(process.env.GEMINI_API_KEY),
+    nemotron: Boolean(process.env.NEMOTRON_API_KEY),
+    kiraCode: Boolean(process.env.KIRA_CODE_API_KEY),
+    kiraGeneral: Boolean(process.env.KIRA_API_KEY),
+    openai: Boolean(process.env.OPENAI_API_KEY),
+    deepseek: Boolean(process.env.DEEPSEEK_API_KEY),
+    timestamp: new Date().toISOString(),
+  });
+});
 
 apiRouter.post('/ai/chat', (req, res) => {
   const { prompt, model, role } = req.body;
@@ -523,12 +572,19 @@ apiRouter.post('/ai/review', (req, res) => {
 });
 
 apiRouter.get('/secrets', (req, res) => {
+  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+  const hasNemotron = Boolean(process.env.NEMOTRON_API_KEY);
+  const hasKiraCode = Boolean(process.env.KIRA_CODE_API_KEY);
+  const hasKira = Boolean(process.env.KIRA_API_KEY);
+  const config = getServerConfig();
+
   res.json({
     secrets: [
-      { name: 'KIRA_API_KEY', scope: 'App', last4: '89f2', status: 'Working' },
-      { name: 'KIRA_CODE_API_KEY', scope: 'App', last4: 'd4c1', status: 'Working' },
-      { name: 'NEMOTRON_API_KEY', scope: 'App', last4: 'a71b', status: 'Working' },
-      { name: 'GITHUB_CLIENT_ID', scope: 'App', last4: 'auth', status: 'Working' },
+      { name: 'GEMINI_API_KEY', scope: 'App', last4: hasGemini ? 'live' : 'none', status: hasGemini ? 'Working' : 'Untested' },
+      { name: 'NEMOTRON_API_KEY', scope: 'App', last4: hasNemotron ? 'a71b' : 'none', status: hasNemotron ? 'Working' : 'Untested' },
+      { name: 'KIRA_CODE_API_KEY', scope: 'App', last4: hasKiraCode ? 'd4c1' : 'none', status: hasKiraCode ? 'Working' : 'Untested' },
+      { name: 'KIRA_API_KEY', scope: 'App', last4: hasKira ? '89f2' : 'none', status: hasKira ? 'Working' : 'Untested' },
+      { name: 'GITHUB_CLIENT_ID', scope: 'App', last4: config.isGitHubConfigured ? 'auth' : 'none', status: config.isGitHubConfigured ? 'Working' : 'Untested' },
     ],
   });
 });

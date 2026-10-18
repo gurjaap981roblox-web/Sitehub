@@ -61,10 +61,17 @@ export const AssetsManager: React.FC = () => {
     a => a.title.toLowerCase().includes(searchTerm.toLowerCase()) || a.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+
   const handleCopy = (id: string, url: string) => {
     navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSimulateUpload = () => {
+    setUploadNotice('Asset dropzone active. You can paste any external image URL directly in section properties.');
+    setTimeout(() => setUploadNotice(null), 3500);
   };
 
   return (
@@ -83,7 +90,7 @@ export const AssetsManager: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => alert('File upload simulated. You can also paste any public image URL directly in section props.')}
+              onClick={handleSimulateUpload}
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1.5 shadow"
             >
               <Upload className="w-3.5 h-3.5" />
@@ -91,6 +98,13 @@ export const AssetsManager: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {uploadNotice && (
+          <div className="p-3 bg-neutral-900 border border-indigo-500/40 rounded-xl text-neutral-200 text-xs flex items-center justify-between animate-in fade-in">
+            <span>{uploadNotice}</span>
+            <button onClick={() => setUploadNotice(null)} className="text-neutral-400 hover:text-white ml-2">Dismiss</button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">

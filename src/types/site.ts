@@ -192,6 +192,9 @@ export interface SecretItem {
   note?: string;
   usedBy?: string[];
   createdAt: string;
+  encryptedValue?: string;
+  nonceHex?: string;
+  rawValue?: string;
 }
 
 export type ModelRole =

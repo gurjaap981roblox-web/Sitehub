@@ -7,11 +7,19 @@ import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
+  Code2,
   ExternalLink,
+  FolderGit2,
+  KeyRound,
   Laptop,
   Maximize2,
+  Menu,
+  Palette,
   RefreshCw,
+  Rocket,
+  Settings as SettingsIcon,
   Sparkles,
+  Terminal,
   X,
 } from 'lucide-react';
 import {
@@ -70,11 +78,13 @@ export default function App() {
   const [activeSteps, setActiveSteps] = useState<GenerationStep[]>([]);
   const [loopWarning, setLoopWarning] = useState<string | null>(null);
 
-  // Modals
+  // Modals & Drawers
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStandaloneOpen, setIsStandaloneOpen] = useState(false);
+  const [isMobileAiOpen, setIsMobileAiOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Providers, Secrets, Routes, Logs, GitHub
   const [providers, setProviders] = useState<ProviderConfig[]>(() => StorageService.getProviders());

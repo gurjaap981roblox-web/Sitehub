@@ -58,7 +58,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   site,
   onUpdateSite,
 }) => {
-  const [activeTab, setActiveTab] = useState<'general' | 'providers' | 'routing' | 'limits' | 'envvars'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'providers' | 'routing' | 'limits' | 'envvars' | 'about'>('general');
   const [appNameInput, setAppNameInput] = useState(settings.appName);
   const [testingProviderId, setTestingProviderId] = useState<string | null>(null);
   const [providerTestMsg, setProviderTestMsg] = useState<{ id: string; msg: string; success: boolean } | null>(null);
@@ -220,6 +220,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Server className="w-3.5 h-3.5" />
               <span>Site Runtime Env Vars</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('about')}
+              className={`w-full text-left px-3 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors ${
+                activeTab === 'about' ? 'bg-indigo-600/20 text-indigo-300 font-semibold border border-indigo-500/30' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>About SiteHub</span>
+            </button>
           </div>
 
           <div className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 text-[10px] text-neutral-400 space-y-1">
@@ -241,6 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {activeTab === 'routing' && 'Role → Model Fallback Routing'}
               {activeTab === 'limits' && 'Usage Quotas & Unlimited Configuration'}
               {activeTab === 'envvars' && 'Site Runtime Environment Variables'}
+              {activeTab === 'about' && 'About SiteHub Universal Studio'}
             </h3>
             <button onClick={onClose} className="p-1 rounded text-neutral-400 hover:text-white">
               <X className="w-4 h-4" />
@@ -564,6 +575,96 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* 6. ABOUT TAB */}
+            {activeTab === 'about' && (
+              <div className="space-y-6 max-w-2xl text-xs">
+                {/* Hero / Wordmark */}
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-neutral-900 to-neutral-950 border border-indigo-500/20 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-700 flex items-center justify-center shadow-lg shadow-indigo-950/80">
+                      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-base text-white tracking-tight">
+                          Site<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-amber-300">Hub</span>
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">
+                          v2.5 Universal
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        Developer-first universal AI website and web application studio.
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-neutral-300 leading-relaxed text-xs">
+                    SiteHub combines a visual WYSIWYG canvas, live AST code editor, multi-model AI routing, and direct GitHub repository deployment into a unified, zero-compromise developer studio.
+                  </p>
+                </div>
+
+                {/* Architecture Highlights */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Core Technical Architecture
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1">
+                      <div className="font-bold text-neutral-200 flex items-center gap-1.5">
+                        <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Multi-Model AI Router</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-400">
+                        Intelligent routing across DeepSeek V4.1, GLM 5.1, Nemotron 3 Ultra, and Kira AI with automatic fallback chains.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1">
+                      <div className="font-bold text-neutral-200 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Production GitHub OAuth</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-400">
+                        Cryptographically secure state tokens, AES-256-GCM encryption, atomic Git trees, and zero browser token leakage.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1">
+                      <div className="font-bold text-neutral-200 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Bi-Directional AST Sync</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-400">
+                        Visual inspector edits and direct Code Studio modifications remain synchronized in a single unified document AST.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1">
+                      <div className="font-bold text-neutral-200 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Multilingual Engine</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-400">
+                        Seamless translation and localized typography across English, Hindi (हिन्दी), and Punjabi (ਪੰਜਾਬੀ).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform Status */}
+                <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-neutral-300 font-medium">All Systems Operational</span>
+                  </div>
+                  <div className="text-neutral-500 font-mono">
+                    Port 3000 • Production Ready
+                  </div>
                 </div>
               </div>
             )}

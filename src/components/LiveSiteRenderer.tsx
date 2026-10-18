@@ -85,8 +85,14 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  // Mobile Menu State
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // In-preview feedback toast (replaces window.alert for iframe safety)
+  const [interactiveToast, setInteractiveToast] = useState<string | null>(null);
+  const triggerFeedback = (msg: string) => {
+    setInteractiveToast(msg);
+    setTimeout(() => setInteractiveToast(null), 3200);
+  };
 
   // Handle Add to Cart
   const handleAddToCart = (item: { id: string; name: string; price: number }) => {
@@ -239,7 +245,8 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
                 openFaqIndex,
                 setOpenFaqIndex,
                 isMobileNavOpen,
-                setIsMobileNavOpen
+                setIsMobileNavOpen,
+                triggerFeedback
               )}
             </div>
           );
@@ -327,6 +334,14 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
         </div>
       )}
 
+      {/* In-Preview Interactive Toast Feedback */}
+      {interactiveToast && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 bg-neutral-900 border border-emerald-500/50 text-white text-xs font-semibold rounded-xl shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-2 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{interactiveToast}</span>
+        </div>
+      )}
+
       {/* Powered by SiteHub Badge */}
       <footer className="py-6 border-t border-neutral-800/60 text-center text-xs text-neutral-500 flex items-center justify-center gap-1.5">
         <span>Powered by</span>
@@ -370,7 +385,8 @@ function renderSectionContent(
   openFaqIndex: number | null,
   setOpenFaqIndex: (i: number | null) => void,
   isMobileNavOpen: boolean,
-  setIsMobileNavOpen: (o: boolean) => void
+  setIsMobileNavOpen: (o: boolean) => void,
+  triggerFeedback?: (msg: string) => void
 ) {
   const props = section.props || {};
 
@@ -1189,7 +1205,7 @@ function renderSectionContent(
                       <span className="text-xs text-neutral-500"> / night</span>
                     </div>
                     <button
-                      onClick={() => alert(`Simulated reservation initiated for: ${suite.title}`)}
+                      onClick={() => triggerFeedback?.(`Reservation initiated for: ${suite.title}`)}
                       style={{ backgroundColor: theme.primaryColor }}
                       className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow hover:opacity-90 transition-opacity"
                     >
@@ -1300,7 +1316,7 @@ function renderSectionContent(
                     <span>{prop.location} • {prop.specs}</span>
                   </div>
                   <button
-                    onClick={() => alert(`Tour scheduled for ${prop.title}`)}
+                    onClick={() => triggerFeedback?.(`Tour scheduled for ${prop.title}`)}
                     className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-colors"
                   >
                     Schedule In-Person Showing
@@ -1346,7 +1362,7 @@ function renderSectionContent(
                   </div>
                 </div>
                 <button
-                  onClick={() => alert(`Application modal opened for: ${job.role}`)}
+                  onClick={() => triggerFeedback?.(`Application submitted for: ${job.role}`)}
                   style={{ backgroundColor: theme.primaryColor }}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow hover:opacity-90 self-start sm:self-auto"
                 >
@@ -1442,7 +1458,7 @@ function renderSectionContent(
                 {['$25', '$50', '$100', '$250'].map((amt, idx) => (
                   <button
                     key={amt}
-                    onClick={() => alert(`Simulated pledge of ${amt} received!`)}
+                    onClick={() => triggerFeedback?.(`Simulated pledge of ${amt} received! Thank you!`)}
                     className={`py-3 rounded-xl font-bold text-sm border transition-colors ${idx === 2 ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-neutral-950 text-neutral-200 border-neutral-800 hover:border-neutral-700'}`}
                   >
                     {amt}
