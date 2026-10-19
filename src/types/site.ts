@@ -6,7 +6,45 @@ export type LanguageCode = 'en' | 'hi' | 'pa';
 
 export type DeviceMode = 'desktop' | 'tablet' | 'mobile';
 
-export type WorkspaceTab = 'build' | 'code' | 'console' | 'files' | 'secrets' | 'settings';
+export type WorkspaceTab =
+  | 'chat'
+  | 'stream'
+  | 'media'
+  | 'build'
+  | 'code'
+  | 'history'
+  | 'projects'
+  | 'secrets'
+  | 'settings';
+
+export interface RunSettings {
+  model: string;
+  provider: string;
+  temperature: number;
+  maxOutputTokens: number;
+  topP: number;
+  topK: number;
+  thinkingLevel: 'none' | 'low' | 'medium' | 'high';
+  tools: {
+    webSearch: boolean;
+    codeExecution: boolean;
+    structuredOutput: boolean;
+  };
+  systemInstructions: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  modelUsed?: string;
+  tokensIn?: number;
+  tokensOut?: number;
+  durationMs?: number;
+  codeBlocks?: { language: string; code: string; title?: string }[];
+  error?: boolean;
+}
 
 export interface ThemeConfig {
   primaryColor: string;

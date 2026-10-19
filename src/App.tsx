@@ -27,9 +27,11 @@ import {
   DeviceMode,
   GitHubConnection,
   LanguageCode,
+  ChatMessage,
   LogEvent,
   ModelRouteConfig,
   ProviderConfig,
+  RunSettings,
   SecretItem,
   SiteDocument,
   UsageRecord,
@@ -43,6 +45,7 @@ import { GitHubService } from './services/githubService';
 import JSZip from 'jszip';
 
 import { TopNav } from './components/TopNav';
+import { SideNav } from './components/SideNav';
 import { LeftPanel } from './components/LeftPanel';
 import { VisualCanvas } from './components/VisualCanvas';
 import { CodeStudio } from './components/CodeStudio';
@@ -53,6 +56,12 @@ import { GitHubModal } from './components/GitHubModal';
 import { PublishModal } from './components/PublishModal';
 import { AssetsManager } from './components/AssetsManager';
 import { LiveSiteRenderer } from './components/LiveSiteRenderer';
+import { RunSettingsPanel, DEFAULT_RUN_SETTINGS } from './components/RunSettingsPanel';
+import { ChatWorkspace } from './components/ChatWorkspace';
+import { StreamWorkspace } from './components/StreamWorkspace';
+import { MediaWorkspace } from './components/MediaWorkspace';
+import { HistoryWorkspace } from './components/HistoryWorkspace';
+import { ProjectsWorkspace } from './components/ProjectsWorkspace';
 
 export default function App() {
   // Global Settings & App Name
@@ -96,6 +105,13 @@ export default function App() {
   const [githubConnection, setGithubConnection] = useState<GitHubConnection>(() =>
     StorageService.getGitHubConnection()
   );
+
+  // Run Settings (Contextual AI Studio Panel)
+  const [runSettings, setRunSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
+  const [isRunSettingsOpen, setIsRunSettingsOpen] = useState(true);
+
+  // Chat Workspace Messages
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   // Toast Notifications
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -207,6 +223,122 @@ export default function App() {
     }
   };
 
+  // Conversational Chat Dispatch
+  const handleSendChatMessage = async (content: string) => {
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    const nextMessages = [...chatMessages, userMsg];
+    setChatMessages(nextMessages);
+    setIsGenerating(true);
+
+    try {
+      const clientKeys: Record<string, string> = {};
+      secrets.forEach(s => {
+        if (s.rawValue) clientKeys[s.name] = s.rawValue;
+      });
+
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
+          model: runSettings.model,
+          systemInstruction: runSettings.systemInstructions,
+          temperature: runSettings.temperature,
+          maxOutputTokens: runSettings.maxOutputTokens,
+          topP: runSettings.topP,
+          topK: runSettings.topK,
+          thinkingLevel: runSettings.thinkingLevel,
+          tools: runSettings.tools,
+          clientKeys,
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to receive model response');
+      }
+
+      const assistantMsg: ChatMessage = {
+        id: `msg-${Date.now()}-ai`,
+        role: 'assistant',
+        content: data.text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        modelUsed: data.modelUsed || runSettings.model,
+        tokensIn: data.tokensIn,
+        tokensOut: data.tokensOut,
+        durationMs: data.durationMs,
+        codeBlocks: data.codeBlocks,
+      };
+
+      setChatMessages(prev => [...prev, assistantMsg]);
+
+      // Record Usage
+      StorageService.recordUsage({
+        id: `usg-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString(),
+        role: 'code-writer',
+        provider: data.providerUsed || runSettings.provider,
+        model: data.modelUsed || runSettings.model,
+        tokensIn: data.tokensIn || Math.floor(content.length * 1.3),
+        tokensOut: data.tokensOut || Math.floor(data.text.length / 3.8),
+        costEstimated: (data.tokensIn || 100) * 0.0000005 + (data.tokensOut || 200) * 0.0000015,
+        durationMs: data.durationMs || 350,
+        status: 'success',
+        note: `Chat: "${content.slice(0, 45)}..."`,
+      });
+      setUsageRecords(StorageService.getUsageRecords());
+    } catch (err: any) {
+      const errorMsg: ChatMessage = {
+        id: `msg-${Date.now()}-err`,
+        role: 'assistant',
+        content: `Error communicating with ${runSettings.model}: ${err.message}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        error: true,
+      };
+      setChatMessages(prev => [...prev, errorMsg]);
+      showToast(`Chat error: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Update Hero Image from Media Studio
+  const handleUpdateHeroImage = (imageUrl: string) => {
+    const updated = JSON.parse(JSON.stringify(activeSite));
+    if (updated.pages?.[0]?.sections) {
+      const heroSec = updated.pages[0].sections.find((s: any) => s.type === 'hero');
+      if (heroSec) {
+        if (!heroSec.props) heroSec.props = {};
+        heroSec.props.heroImage = imageUrl;
+        handleUpdateSite(updated);
+        showToast('Updated project hero image');
+      }
+    }
+  };
+
+  // Project Management Actions
+  const handleCreateNewProject = () => {
+    setActiveTab('build');
+    showToast('Describe what you want to build in the AI assistant prompt');
+  };
+
+  const handleDeleteSite = (id: string) => {
+    if (sites.length <= 1) return;
+    StorageService.deleteSite(id);
+    const remaining = StorageService.getSites();
+    setSites(remaining);
+    if (activeSite.id === id) {
+      setActiveSite(remaining[0]);
+    }
+    showToast('Project deleted');
+  };
+
   // Export Bundle Handlers
   const handleExport = (format: 'zip' | 'html' | 'json') => {
     const files = GitHubService.generateFilesMap(activeSite, appName);
@@ -288,7 +420,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-neutral-950 text-neutral-100 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-screen w-screen bg-[#0B0D12] text-[#F3F5FA] overflow-hidden font-sans select-none">
       {/* Top Header Bar */}
       <TopNav
         appName={appName}
@@ -320,62 +452,127 @@ export default function App() {
           });
         }}
         onExport={handleExport}
+        isRunSettingsOpen={isRunSettingsOpen}
+        onToggleRunSettings={() => setIsRunSettingsOpen(!isRunSettingsOpen)}
+        selectedModel={runSettings.model}
+        hasValidApiKey={true}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
-      {/* Main Workspace Body */}
+      {/* Main Studio 3-Panel Shell */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left AI Assistant Panel (Always visible in Visual Canvas and Code Studio) */}
-        {(activeTab === 'build' || activeTab === 'code') && (
-          <LeftPanel
-            site={activeSite}
-            onUpdateSite={handleUpdateSite}
-            isGenerating={isGenerating}
-            activeSteps={activeSteps}
-            currentLang={currentLang}
-            onRunPrompt={handleRunPrompt}
-            loopWarning={loopWarning}
-            onClearLoopWarning={() => setLoopWarning(null)}
-          />
-        )}
+        {/* Left SideNav */}
+        <SideNav
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          isMobileOpen={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
+        />
 
-        {/* Tab Viewports */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Central Workspace Area */}
+        <div className="flex-1 flex overflow-hidden bg-[#0B0D12]">
+          {/* Build Mode Sub-Panels (AI Assistant + Canvas) */}
           {activeTab === 'build' && (
-            <VisualCanvas
-              site={activeSite}
-              onUpdateSite={handleUpdateSite}
-              deviceMode={deviceMode}
-              appName={appName}
-              currentLang={currentLang}
-            />
+            <>
+              <LeftPanel
+                site={activeSite}
+                onUpdateSite={handleUpdateSite}
+                isGenerating={isGenerating}
+                activeSteps={activeSteps}
+                currentLang={currentLang}
+                onRunPrompt={handleRunPrompt}
+                loopWarning={loopWarning}
+                onClearLoopWarning={() => setLoopWarning(null)}
+              />
+              <VisualCanvas
+                site={activeSite}
+                onUpdateSite={handleUpdateSite}
+                deviceMode={deviceMode}
+                appName={appName}
+                currentLang={currentLang}
+              />
+            </>
           )}
 
+          {/* Code Mode Sub-Panels (AI Assistant + Code Studio) */}
           {activeTab === 'code' && (
-            <CodeStudio
-              site={activeSite}
-              onUpdateSite={handleUpdateSite}
-              appName={appName}
-              onAskAiToFixCode={prompt => handleRunPrompt(prompt, 'deepseek')}
+            <>
+              <LeftPanel
+                site={activeSite}
+                onUpdateSite={handleUpdateSite}
+                isGenerating={isGenerating}
+                activeSteps={activeSteps}
+                currentLang={currentLang}
+                onRunPrompt={handleRunPrompt}
+                loopWarning={loopWarning}
+                onClearLoopWarning={() => setLoopWarning(null)}
+              />
+              <CodeStudio
+                site={activeSite}
+                onUpdateSite={handleUpdateSite}
+                appName={appName}
+                onAskAiToFixCode={prompt => handleRunPrompt(prompt, runSettings.model)}
+              />
+            </>
+          )}
+
+          {/* Chat Workspace */}
+          {activeTab === 'chat' && (
+            <ChatWorkspace
+              messages={chatMessages}
+              onSendMessage={handleSendChatMessage}
+              isGenerating={isGenerating}
+              onStopGeneration={() => setIsGenerating(false)}
+              onClearConversation={() => setChatMessages([])}
+              runSettings={runSettings}
+              onOpenBuildMode={prompt => {
+                if (prompt) handleRunPrompt(prompt, runSettings.model);
+                setActiveTab('build');
+              }}
+              onOpenCodeMode={() => setActiveTab('code')}
             />
           )}
 
-          {activeTab === 'console' && (
-            <ConsolePanel
-              logs={logs}
-              usageRecords={usageRecords}
-              onClearLogs={() => {
-                StorageService.clearLogs();
-                setLogs([]);
-              }}
-              onSendErrorToAi={errMsg => {
-                setActiveTab('code');
-                handleRunPrompt(`Fix this console error in the site: "${errMsg}"`, 'deepseek');
+          {/* Stream Workspace */}
+          {activeTab === 'stream' && (
+            <StreamWorkspace
+              runSettings={runSettings}
+              onApplyToProject={() => setActiveTab('build')}
+            />
+          )}
+
+          {/* Media Workspace */}
+          {activeTab === 'media' && (
+            <MediaWorkspace
+              currentSite={activeSite}
+              onUpdateHeroImage={handleUpdateHeroImage}
+            />
+          )}
+
+          {/* History Workspace */}
+          {activeTab === 'history' && (
+            <HistoryWorkspace
+              onReRunPrompt={(prompt, model) => {
+                handleRunPrompt(prompt, model);
+                setActiveTab('build');
               }}
             />
           )}
 
-          {activeTab === 'files' && <AssetsManager />}
+          {/* Projects Workspace */}
+          {activeTab === 'projects' && (
+            <ProjectsWorkspace
+              currentSite={activeSite}
+              allSites={sites}
+              onSelectSite={handleUpdateSite}
+              onCreateNewProject={handleCreateNewProject}
+              onDeleteSite={handleDeleteSite}
+              onExport={handleExport}
+              onOpenBuildMode={() => setActiveTab('build')}
+            />
+          )}
 
+          {/* Secrets Manager Workspace */}
           {activeTab === 'secrets' && (
             <SecretsManager
               secrets={secrets}
@@ -384,8 +581,9 @@ export default function App() {
             />
           )}
 
+          {/* Settings Workspace */}
           {activeTab === 'settings' && (
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-6 overflow-y-auto bg-[#0B0D12]">
               <SettingsModal
                 isOpen={true}
                 onClose={() => setActiveTab('build')}
@@ -401,6 +599,15 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {/* Right Run Settings Panel */}
+        <RunSettingsPanel
+          settings={runSettings}
+          onChangeSettings={setRunSettings}
+          isOpen={isRunSettingsOpen}
+          onToggleOpen={() => setIsRunSettingsOpen(!isRunSettingsOpen)}
+          estimatedPromptTokens={Math.floor(activeSite.name.length * 1.5) + 300}
+        />
       </div>
 
       {/* Settings Modal (when opened from top gear button) */}
@@ -446,7 +653,7 @@ export default function App() {
 
       {/* Toast Feedback Banner */}
       {toastMessage && (
-        <div className="fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom duration-200">
+        <div className="fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-xl bg-[#191D29] border border-[#292E3D] text-[#F3F5FA] text-xs font-semibold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom duration-200">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>

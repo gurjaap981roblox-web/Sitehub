@@ -536,39 +536,103 @@ apiRouter.get('/ai/status', (req, res) => {
   });
 });
 
-apiRouter.post('/ai/chat', (req, res) => {
-  const { prompt, model, role } = req.body;
-  res.json({
-    success: true,
-    message: `Synthesized request for prompt: "${prompt?.slice(0, 40)}..."`,
-    role: role || 'builder',
-    model: model || 'deepseek-v4.1-flash',
-  });
+apiRouter.get('/ai/models', (req, res) => {
+  res.json({ models: AiService.getModelCatalogue() });
 });
 
-apiRouter.post('/ai/plan', (req, res) => {
-  res.json({
-    plan: [
-      'Design modern high-contrast hero banner',
-      'Architect responsive multi-tier pricing section',
-      'Generate interactive table reservation booking form',
-      'Optimize accessibility and mobile touch targets',
-    ],
-    targetRole: 'planner',
-    modelUsed: 'nvidia/nemotron-3-ultra',
-  });
+apiRouter.post('/ai/chat', async (req, res) => {
+  try {
+    const { messages, prompt, model, systemInstruction, temperature, maxOutputTokens, topP, topK, thinkingLevel, tools, clientKeys } = req.body;
+    
+    // Support single prompt or multi-turn messages array
+    const messageList = Array.isArray(messages) && messages.length > 0
+      ? messages
+      : [{ role: 'user', content: prompt || 'Hello' }];
+
+    const result = await AiService.chat({
+      messages: messageList,
+      model,
+      systemInstruction,
+      temperature,
+      maxOutputTokens,
+      topP,
+      topK,
+      thinkingLevel,
+      tools,
+      clientKeys,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[AI Chat Error]', error);
+    res.status(500).json({ success: false, error: error.message || 'Chat request failed.' });
+  }
 });
 
-apiRouter.post('/ai/review', (req, res) => {
-  res.json({
-    passed: true,
-    score: 98,
-    audits: [
-      'Contrast ratio: 12.4:1 (WCAG AAA compliant)',
-      'Mobile touch targets: all >= 48px',
-      'Semantic tags: main, section, nav, header validated',
-    ],
-  });
+apiRouter.post('/ai/stream', async (req, res) => {
+  try {
+    const { messages, prompt, model, systemInstruction, temperature, maxOutputTokens, topP, topK, thinkingLevel, tools, clientKeys } = req.body;
+
+    const messageList = Array.isArray(messages) && messages.length > 0
+      ? messages
+      : [{ role: 'user', content: prompt || 'Stream demo' }];
+
+    // Prepare Server-Sent Events headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const summary = await AiService.streamChat(
+      {
+        messages: messageList,
+        model,
+        systemInstruction,
+        temperature,
+        maxOutputTokens,
+        topP,
+        topK,
+        thinkingLevel,
+        tools,
+        clientKeys,
+      },
+      chunk => {
+        res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+      }
+    );
+
+    res.write(`data: ${JSON.stringify({ done: true, summary })}\n\n`);
+    res.end();
+  } catch (error: any) {
+    console.error('[AI Stream Error]', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Stream failed.' });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
+  }
+});
+
+apiRouter.post('/ai/generate-media', async (req, res) => {
+  try {
+    const { prompt, style, aspectRatio, clientKeys } = req.body;
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'Prompt is required for media generation.' });
+    }
+
+    const result = await AiService.generateMedia({
+      prompt,
+      style,
+      aspectRatio,
+      clientKeys,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('[AI Media Error]', error);
+    res.status(500).json({ success: false, error: error.message || 'Media generation failed.' });
+  }
 });
 
 apiRouter.get('/secrets', (req, res) => {

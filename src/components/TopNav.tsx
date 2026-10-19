@@ -24,11 +24,14 @@ import {
   Rocket,
   Settings as SettingsIcon,
   Share2,
+  Sliders,
   Smartphone,
   Sparkles,
   Tablet,
   Terminal,
   Undo2,
+  Cpu,
+  Zap,
 } from 'lucide-react';
 import { DeviceMode, LanguageCode, SiteDocument, WorkspaceTab } from '../types/site';
 import { STARTER_TEMPLATES } from '../lib/templates';
@@ -57,6 +60,10 @@ interface TopNavProps {
   onToggleMobileMenu?: () => void;
   onToggleMobileAi?: () => void;
   isMobileAiOpen?: boolean;
+  isRunSettingsOpen?: boolean;
+  onToggleRunSettings?: () => void;
+  selectedModel?: string;
+  hasValidApiKey?: boolean;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -82,6 +89,10 @@ export const TopNav: React.FC<TopNavProps> = ({
   onToggleMobileMenu,
   onToggleMobileAi,
   isMobileAiOpen,
+  isRunSettingsOpen,
+  onToggleRunSettings,
+  selectedModel = 'gemini-3.8-flash',
+  hasValidApiKey = true,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(site.name);
@@ -106,13 +117,13 @@ export const TopNav: React.FC<TopNavProps> = ({
   };
 
   return (
-    <header className="h-14 bg-neutral-900 border-b border-neutral-800 px-3 sm:px-4 flex items-center justify-between select-none z-30 shrink-0">
+    <header className="h-13 bg-[#0F1118] border-b border-[#292E3D] px-3 sm:px-4 flex items-center justify-between select-none z-30 shrink-0">
       {/* Left: Brand + Project Switcher + Title */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <div className="flex items-center gap-2 pr-2.5 sm:pr-3 border-r border-neutral-800 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-800 p-[1px] shadow-lg shadow-indigo-950/80 shrink-0">
-            <div className="w-full h-full bg-neutral-950 rounded-[11px] flex items-center justify-center">
-              <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="flex items-center gap-2 pr-2.5 sm:pr-3 border-r border-[#292E3D] shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#8B9BFF] via-[#6366f1] to-violet-800 p-[1px] shadow-lg shadow-[#8B9BFF]/20 shrink-0">
+            <div className="w-full h-full bg-[#0B0D12] rounded-[11px] flex items-center justify-center">
+              <svg className="w-4 h-4 text-[#8B9BFF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="12 2 2 7 12 12 22 7 12 2" />
                 <polyline points="2 17 12 22 22 17" />
                 <polyline points="2 12 12 17 22 12" />
@@ -120,10 +131,10 @@ export const TopNav: React.FC<TopNavProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-sm tracking-tight text-white">
-              Site<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-amber-300">Hub</span>
+            <span className="font-extrabold text-sm tracking-tight text-[#F3F5FA]">
+              Site<span className="text-[#8B9BFF]">Hub</span>
             </span>
-            <span className="hidden sm:inline-block text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+            <span className="hidden sm:inline-block text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#191D29] text-[#8B9BFF] border border-[#292E3D] font-mono">
               STUDIO
             </span>
           </div>
@@ -192,57 +203,66 @@ export const TopNav: React.FC<TopNavProps> = ({
         </div>
       </div>
 
-      {/* Center: Workspace Navigation Tabs (Desktop & Tablet) */}
-      <div className="hidden md:flex items-center gap-1 bg-neutral-950/80 p-1 rounded-xl border border-neutral-800">
+      {/* Center: Quick Workspace Switcher */}
+      <div className="hidden lg:flex items-center gap-1 bg-[#131620] p-1 rounded-xl border border-[#292E3D]">
+        <button
+          onClick={() => onSelectTab('chat')}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            activeTab === 'chat'
+              ? 'bg-[#191D29] text-[#8B9BFF] font-semibold border border-[#292E3D]'
+              : 'text-[#737C90] hover:text-[#F3F5FA]'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-[#8B9BFF]" />
+          <span>Chat</span>
+        </button>
+
         <button
           onClick={() => onSelectTab('build')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-            activeTab === 'build' ? 'bg-neutral-800 text-white shadow-sm font-semibold' : 'text-neutral-400 hover:text-neutral-200'
+            activeTab === 'build'
+              ? 'bg-[#191D29] text-[#8B9BFF] font-semibold border border-[#292E3D]'
+              : 'text-[#737C90] hover:text-[#F3F5FA]'
           }`}
         >
           <Palette className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="hidden md:inline">{t.tabs.build}</span>
+          <span>Build</span>
         </button>
 
         <button
           onClick={() => onSelectTab('code')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-            activeTab === 'code' ? 'bg-neutral-800 text-white shadow-sm font-semibold' : 'text-neutral-400 hover:text-neutral-200'
+            activeTab === 'code'
+              ? 'bg-[#191D29] text-[#8B9BFF] font-semibold border border-[#292E3D]'
+              : 'text-[#737C90] hover:text-[#F3F5FA]'
           }`}
         >
           <Code2 className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden md:inline">{t.tabs.code}</span>
+          <span>Code</span>
         </button>
 
         <button
-          onClick={() => onSelectTab('console')}
+          onClick={() => onSelectTab('stream')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-            activeTab === 'console' ? 'bg-neutral-800 text-white shadow-sm font-semibold' : 'text-neutral-400 hover:text-neutral-200'
+            activeTab === 'stream'
+              ? 'bg-[#191D29] text-[#8B9BFF] font-semibold border border-[#292E3D]'
+              : 'text-[#737C90] hover:text-[#F3F5FA]'
           }`}
         >
-          <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden md:inline">{t.tabs.console}</span>
+          <Zap className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Stream</span>
         </button>
 
         <button
-          onClick={() => onSelectTab('files')}
+          onClick={() => onSelectTab('projects')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-            activeTab === 'files' ? 'bg-neutral-800 text-white shadow-sm font-semibold' : 'text-neutral-400 hover:text-neutral-200'
+            activeTab === 'projects'
+              ? 'bg-[#191D29] text-[#8B9BFF] font-semibold border border-[#292E3D]'
+              : 'text-[#737C90] hover:text-[#F3F5FA]'
           }`}
         >
-          <FileCode className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="hidden lg:inline">{t.tabs.files}</span>
-        </button>
-
-        <button
-          onClick={onOpenSecrets}
-          title="Secrets Manager (Google AI Studio style)"
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-            activeTab === 'secrets' ? 'bg-neutral-800 text-white shadow-sm font-semibold' : 'text-neutral-400 hover:text-neutral-200'
-          }`}
-        >
-          <KeyRound className="w-3.5 h-3.5 text-rose-400" />
-          <span className="hidden lg:inline">{t.tabs.secrets}</span>
+          <FolderGit2 className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Projects</span>
         </button>
       </div>
 
@@ -410,20 +430,49 @@ export const TopNav: React.FC<TopNavProps> = ({
           {copiedShare ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
         </button>
 
+        {/* AI Provider Status Button */}
+        <button
+          onClick={onOpenSecrets}
+          title={hasValidApiKey ? `Active Provider: ${selectedModel}` : 'Configure AI Provider'}
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono border transition-colors ${
+            hasValidApiKey
+              ? 'bg-[#131620] border-[#292E3D] text-[#8B9BFF] hover:border-[#8B9BFF]/50'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+          }`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${hasValidApiKey ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+          <span className="truncate max-w-[110px]">{selectedModel}</span>
+        </button>
+
         {/* Deploy & Publish Button */}
         <button
           onClick={onOpenDeploy}
-          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md transition-all active:scale-95 shrink-0"
+          className="px-3 py-1.5 rounded-lg bg-[#8B9BFF] hover:bg-[#A5B4FC] text-black text-xs font-semibold flex items-center gap-1.5 shadow-md transition-all active:scale-95 shrink-0"
         >
-          <Rocket className="w-3.5 h-3.5 text-indigo-200" />
+          <Rocket className="w-3.5 h-3.5" />
           <span className="hidden xs:inline">{t.actions.deploy}</span>
         </button>
 
-        {/* Settings Button */}
+        {/* Run Settings Toggle Button */}
+        {onToggleRunSettings && (
+          <button
+            onClick={onToggleRunSettings}
+            title={isRunSettingsOpen ? 'Collapse Run Settings' : 'Expand Run Settings'}
+            className={`p-1.5 rounded-lg border transition-colors ${
+              isRunSettingsOpen
+                ? 'bg-[#191D29] border-[#8B9BFF] text-[#8B9BFF]'
+                : 'bg-[#131620] border-[#292E3D] text-[#737C90] hover:text-[#F3F5FA] hover:bg-[#191D29]'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Settings Gear Button */}
         <button
           onClick={onOpenSettings}
-          title="Platform Settings & Routing Table"
-          className="hidden sm:flex p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+          title="Studio Settings"
+          className="hidden sm:flex p-1.5 rounded-lg text-[#737C90] hover:text-[#F3F5FA] hover:bg-[#191D29] transition-colors"
         >
           <SettingsIcon className="w-4 h-4" />
         </button>
@@ -432,7 +481,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         {onToggleMobileMenu && (
           <button
             onClick={onToggleMobileMenu}
-            className="md:hidden p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+            className="md:hidden p-1.5 rounded-lg text-[#737C90] hover:text-[#F3F5FA] hover:bg-[#191D29] transition-colors"
             title="Open Studio Menu"
           >
             <Menu className="w-4 h-4" />

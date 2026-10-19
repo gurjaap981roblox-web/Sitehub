@@ -62,4 +62,42 @@ describe('SiteHub AI Engine & Synthesizer Tests', () => {
     assert.ok(res.tokensIn > 0);
     assert.ok(res.tokensOut > 0);
   });
+
+  it('should return verified model catalogue with specifications', () => {
+    const models = AiService.getModelCatalogue();
+    assert.ok(models.length >= 4);
+    assert.ok(models.some(m => m.id === 'gemini-3.8-flash'));
+    assert.ok(models.some(m => m.id === 'gemini-4-argon'));
+    assert.ok(models.some(m => m.id === 'nvidia/nemotron-3-ultra'));
+    const gemini = models.find(m => m.id === 'gemini-3.8-flash');
+    assert.strictEqual(gemini?.provider, 'google');
+    assert.ok(gemini?.contextWindow);
+    assert.ok(gemini?.maxOutputTokens);
+  });
+
+  it('should execute chat synthesis and extract structured code blocks', async () => {
+    const chatRes = await AiService.chat({
+      messages: [{ role: 'user', content: 'Generate a button component in React' }],
+      model: 'gemini-3.8-flash',
+    });
+
+    assert.strictEqual(chatRes.success, true);
+    assert.ok(chatRes.text.length > 0);
+    assert.ok(chatRes.durationMs >= 0);
+    assert.ok(chatRes.tokensIn > 0);
+    assert.ok(chatRes.tokensOut > 0);
+  });
+
+  it('should generate media assets with aspect ratio and semantic mapping', async () => {
+    const mediaRes = await AiService.generateMedia({
+      prompt: 'Luxury modern architectural beachfront hotel',
+      aspectRatio: '16:9',
+      style: 'photorealistic',
+    });
+
+    assert.strictEqual(mediaRes.success, true);
+    assert.ok(mediaRes.imageUrl.startsWith('http'));
+    assert.strictEqual(mediaRes.aspectRatio, '16:9');
+  });
 });
+
