@@ -9,7 +9,7 @@ import { StorageService } from '../lib/storage';
 
 export interface GenerationStep {
   step: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'fallback';
+  status: 'pending' | 'in_progress' | 'completed' | 'fallback' | 'failed';
   modelUsed?: string;
   details?: string;
 }
@@ -209,39 +209,50 @@ export class AiRouterService {
         ],
       };
     } catch (err: any) {
-      console.warn('[AI Router] Backend AI request failed or offline, using fallback synthesis:', err.message);
+      console.error('[AI Router] Backend AI request failed:', err.message);
 
-      // Local Fallback
+      // Rule R2: The mock provider must NOT hide failures.
+      // If the user explicitly requested demo mode or offline engine, handle honestly:
+      if (selectedModelOption === 'mock-smart-builder' || selectedModelOption === 'demo') {
+        notifyStep({
+          step: '2. Code & AST Synthesis',
+          status: 'fallback',
+          modelUsed: 'demo-offline-engine',
+          details: 'Demo mode — built from template, not by neural AI.',
+        });
+
+        const { updatedSite, patches } = this.synthesizeAst(prompt, currentSite);
+        updatedSite.meta = {
+          ...updatedSite.meta,
+          generatedBy: 'demo',
+          promptUsed: prompt,
+          timestamp: new Date().toISOString(),
+        };
+
+        const durationMs = Math.round(performance.now() - startTime);
+
+        return {
+          updatedSite,
+          patches,
+          modelUsed: 'demo-offline-engine',
+          providerUsed: 'offline',
+          steps,
+          tokensIn: 0,
+          tokensOut: 0,
+          durationMs,
+          reviewNotes: ['Demo mode template synthesis (offline). Connect AI keys for neural generation.'],
+        };
+      }
+
+      // Otherwise, throw the honest error to let the user know what failed
       notifyStep({
         step: '2. Code & AST Synthesis',
-        status: 'fallback',
-        modelUsed: 'mock-smart-builder',
-        details: 'Applied Universal AST synthesizer fallback.',
+        status: 'failed',
+        modelUsed: selectedModelOption,
+        details: `Generation failed: ${err.message}`,
       });
 
-      const { updatedSite, patches } = this.synthesizeAst(prompt, currentSite);
-
-      notifyStep({
-        step: '4. Responsive & Accessibility Audit',
-        status: 'completed',
-        details: 'Breakpoints and touch targets validated.',
-      });
-
-      const durationMs = Math.round(performance.now() - startTime);
-      const tokensIn = Math.floor(prompt.length * 1.4) + 400;
-      const tokensOut = Math.floor(JSON.stringify(patches).length / 3) + 500;
-
-      return {
-        updatedSite,
-        patches,
-        modelUsed: 'mock-smart-builder',
-        providerUsed: 'mock-provider',
-        steps,
-        tokensIn,
-        tokensOut,
-        durationMs,
-        reviewNotes: ['Synthesized layout via local Universal Engine.'],
-      };
+      throw new Error(`AI_CALL_FAILED: ${err.message}`);
     }
   }
 

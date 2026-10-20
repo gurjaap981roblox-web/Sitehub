@@ -99,5 +99,41 @@ describe('SiteHub AI Engine & Synthesizer Tests', () => {
     assert.ok(mediaRes.imageUrl.startsWith('http'));
     assert.strictEqual(mediaRes.aspectRatio, '16:9');
   });
+
+  it('should validate all pre-generated AI component templates for drag and drop', async () => {
+    const { COMPONENT_TEMPLATES } = await import('../src/lib/componentLibrary');
+    assert.ok(COMPONENT_TEMPLATES.length >= 8);
+
+    // Verify key components requested: pricing tables, testimonials, and FAQ sections
+    const pricingTpl = COMPONENT_TEMPLATES.find(t => t.category === 'pricing');
+    assert.ok(pricingTpl, 'Pricing template exists');
+    const pricingSec = pricingTpl.createSection();
+    assert.strictEqual(pricingSec.type, 'pricing');
+    assert.ok(pricingSec.props.plans?.length > 0);
+
+    const testTpl = COMPONENT_TEMPLATES.find(t => t.category === 'social-proof');
+    assert.ok(testTpl, 'Testimonials template exists');
+    const testSec = testTpl.createSection();
+    assert.strictEqual(testSec.type, 'testimonials');
+    assert.ok(testSec.props.items?.length > 0);
+
+    const faqTpl = COMPONENT_TEMPLATES.find(t => t.category === 'faq');
+    assert.ok(faqTpl, 'FAQ template exists');
+    const faqSec = faqTpl.createSection();
+    assert.strictEqual(faqSec.type, 'faq');
+    assert.ok(faqSec.props.items?.length > 0);
+
+    // Verify all templates produce valid, non-colliding IDs and valid props
+    const seenIds = new Set<string>();
+    for (const tpl of COMPONENT_TEMPLATES) {
+      assert.ok(tpl.name && tpl.category && tpl.iconName);
+      const sec = tpl.createSection();
+      assert.ok(sec.id);
+      assert.ok(!seenIds.has(sec.id), `Duplicate section ID detected: ${sec.id}`);
+      seenIds.add(sec.id);
+      assert.ok(sec.title);
+      assert.ok(sec.props);
+    }
+  });
 });
 

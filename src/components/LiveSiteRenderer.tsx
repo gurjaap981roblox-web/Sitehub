@@ -50,6 +50,8 @@ interface LiveSiteRendererProps {
   isPreview?: boolean;
   activePageId?: string;
   onNavigatePage?: (pageIdOrSlug: string) => void;
+  onDropComponent?: (componentId: string, targetIndex: number) => void;
+  isDraggingComponent?: boolean;
 }
 
 export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
@@ -60,8 +62,11 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
   isPreview = true,
   activePageId,
   onNavigatePage,
+  onDropComponent,
+  isDraggingComponent = false,
 }) => {
   const [internalPageId, setInternalPageId] = useState<string>(activePageId || site.pages[0]?.id || 'page-home');
+  const [activeDropIndex, setActiveDropIndex] = useState<number | null>(null);
   const effectivePageId = activePageId || internalPageId;
   const activePage =
     site.pages.find(p => p.id === effectivePageId || p.slug === effectivePageId) ||
@@ -218,63 +223,150 @@ export const LiveSiteRenderer: React.FC<LiveSiteRendererProps> = ({
         fontFamily: site.language === 'hi' ? 'var(--font-devanagari)' : site.language === 'pa' ? 'var(--font-gurmukhi)' : 'var(--font-sans)',
       }}
     >
-      {/* Sections List */}
-      {activePage.sections
-        .filter(s => !s.isHidden)
-        .map(section => {
-          const isSelected = isPreview && selectedSectionId === section.id;
-          return (
-            <div
-              key={section.id}
-              onClick={() => isPreview && onSelectSection && onSelectSection(section.id)}
-              className={`relative transition-all ${
-                isPreview ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500/50 hover:ring-offset-2 hover:ring-offset-neutral-900' : ''
-              } ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-neutral-900' : ''}`}
-            >
-              {isSelected && (
-                <div className="absolute top-2 right-4 z-30 px-2 py-0.5 text-xs font-semibold tracking-wider text-white uppercase bg-indigo-600 rounded-md shadow-md">
-                  {section.type} Section
-                </div>
-              )}
-              {renderSectionContent(
-                section,
-                theme,
-                site,
-                cart.length,
-                () => setIsCartOpen(true),
-                handleAddToCart,
-                selectedCategory,
-                setSelectedCategory,
-                bookingDate,
-                setBookingDate,
-                bookingTime,
-                setBookingTime,
-                bookingGuests,
-                setBookingGuests,
-                bookingName,
-                setBookingName,
-                bookingEmail,
-                setBookingEmail,
-                bookingSuccess,
-                handleBookingSubmit,
-                contactName,
-                setContactName,
-                contactEmail,
-                setContactEmail,
-                contactMessage,
-                setContactMessage,
-                contactSuccess,
-                handleContactSubmit,
-                openFaqIndex,
-                setOpenFaqIndex,
-                isMobileNavOpen,
-                setIsMobileNavOpen,
-                triggerFeedback,
-                handlePageNavigation
-              )}
-            </div>
-          );
-        })}
+      {/* Sections List with Drop Targets */}
+      {(() => {
+        const visibleSections = activePage.sections.filter(s => !s.isHidden);
+        return (
+          <>
+            {/* Top Drop Zone */}
+            {isPreview && onDropComponent && (
+              <div
+                onDragOver={e => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                  setActiveDropIndex(0);
+                }}
+                onDragLeave={() => setActiveDropIndex(null)}
+                onDrop={e => {
+                  e.preventDefault();
+                  setActiveDropIndex(null);
+                  const data = e.dataTransfer.getData('application/sitehub-component');
+                  if (data) {
+                    try {
+                      const parsed = JSON.parse(data);
+                      if (parsed.componentId) onDropComponent(parsed.componentId, 0);
+                    } catch {}
+                  }
+                }}
+                className={`transition-all duration-200 flex items-center justify-center ${
+                  activeDropIndex === 0
+                    ? 'py-4 my-2 border-2 border-dashed border-indigo-500 bg-indigo-950/50 rounded-xl'
+                    : isDraggingComponent
+                    ? 'py-2 my-1 border border-dashed border-indigo-500/50 bg-indigo-950/20 rounded-lg'
+                    : 'h-1 opacity-0 hover:opacity-100 hover:h-4 hover:bg-indigo-600/20'
+                }`}
+              >
+                {(activeDropIndex === 0 || isDraggingComponent) && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-300">
+                    <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Drop Component at Top</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {visibleSections.map(section => {
+              const actualIndex = activePage.sections.findIndex(s => s.id === section.id);
+              const isSelected = isPreview && selectedSectionId === section.id;
+              const dropTargetIndex = actualIndex + 1;
+              const isOverThisSlot = activeDropIndex === dropTargetIndex;
+
+              return (
+                <React.Fragment key={section.id}>
+                  <div
+                    onClick={() => isPreview && onSelectSection && onSelectSection(section.id)}
+                    className={`relative transition-all ${
+                      isPreview
+                        ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500/50 hover:ring-offset-2 hover:ring-offset-neutral-900'
+                        : ''
+                    } ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-neutral-900' : ''}`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-4 z-30 px-2.5 py-1 text-[11px] font-bold tracking-wider text-white uppercase bg-indigo-600 rounded-md shadow-lg flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>{section.type} Section</span>
+                      </div>
+                    )}
+                    {renderSectionContent(
+                      section,
+                      theme,
+                      site,
+                      cart.length,
+                      () => setIsCartOpen(true),
+                      handleAddToCart,
+                      selectedCategory,
+                      setSelectedCategory,
+                      bookingDate,
+                      setBookingDate,
+                      bookingTime,
+                      setBookingTime,
+                      bookingGuests,
+                      setBookingGuests,
+                      bookingName,
+                      setBookingName,
+                      bookingEmail,
+                      setBookingEmail,
+                      bookingSuccess,
+                      handleBookingSubmit,
+                      contactName,
+                      setContactName,
+                      contactEmail,
+                      setContactEmail,
+                      contactMessage,
+                      setContactMessage,
+                      contactSuccess,
+                      handleContactSubmit,
+                      openFaqIndex,
+                      setOpenFaqIndex,
+                      isMobileNavOpen,
+                      setIsMobileNavOpen,
+                      triggerFeedback,
+                      handlePageNavigation
+                    )}
+                  </div>
+
+                  {/* Drop Zone between sections */}
+                  {isPreview && onDropComponent && (
+                    <div
+                      onDragOver={e => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'copy';
+                        setActiveDropIndex(dropTargetIndex);
+                      }}
+                      onDragLeave={() => setActiveDropIndex(null)}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setActiveDropIndex(null);
+                        const data = e.dataTransfer.getData('application/sitehub-component');
+                        if (data) {
+                          try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.componentId) onDropComponent(parsed.componentId, dropTargetIndex);
+                          } catch {}
+                        }
+                      }}
+                      className={`transition-all duration-200 flex items-center justify-center ${
+                        isOverThisSlot
+                          ? 'py-4 my-2 border-2 border-dashed border-indigo-500 bg-indigo-950/50 rounded-xl'
+                          : isDraggingComponent
+                          ? 'py-2 my-1 border border-dashed border-indigo-500/50 bg-indigo-950/20 rounded-lg'
+                          : 'h-1 opacity-0 hover:opacity-100 hover:h-4 hover:bg-indigo-600/20'
+                      }`}
+                    >
+                      {(isOverThisSlot || isDraggingComponent) && (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-300">
+                          <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Drop Component Here</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </>
+        );
+      })()}
 
       {/* Slide-over Shopping Cart Drawer */}
       {isCartOpen && (
@@ -867,7 +959,7 @@ function renderSectionContent(
       );
 
     case 'pricing':
-      const plans = props.plans || [];
+      const plans = props.plans || props.tiers || [];
       return (
         <section id="pricing" className="py-20 px-6 max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
@@ -892,7 +984,7 @@ function renderSectionContent(
                   <h3 className="text-xl font-bold text-white">{plan.name}</h3>
                   <div className="mt-4 mb-6 flex items-baseline gap-1">
                     <span className="text-4xl font-extrabold text-white">{plan.price}</span>
-                    <span className="text-sm text-neutral-400">{plan.period}</span>
+                    <span className="text-sm text-neutral-400">{plan.period || '/mo'}</span>
                   </div>
                   <ul className="space-y-3 text-sm text-neutral-300">
                     {plan.features?.map((f: string, idx: number) => (
@@ -920,13 +1012,14 @@ function renderSectionContent(
       );
 
     case 'testimonials':
+      const testimonialItems = props.items || props.testimonials || [];
       return (
         <section id="testimonials" className="py-20 px-6 max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
             <h2 className="text-3xl font-bold text-white">{section.title}</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
-            {props.items?.map((item: any, i: number) => (
+            {testimonialItems.map((item: any, i: number) => (
               <div
                 key={i}
                 className="p-8 rounded-2xl bg-neutral-900/60 border border-neutral-800 space-y-4 relative"
@@ -939,7 +1032,7 @@ function renderSectionContent(
                 <p className="text-neutral-300 italic text-base leading-relaxed">"{item.quote}"</p>
                 <div>
                   <div className="font-bold text-white">{item.author}</div>
-                  <div className="text-xs text-neutral-400">{item.title}</div>
+                  <div className="text-xs text-neutral-400">{item.title || item.role}</div>
                 </div>
               </div>
             ))}
@@ -948,14 +1041,17 @@ function renderSectionContent(
       );
 
     case 'faq':
+      const faqItems = props.items || props.faqs || [];
       return (
         <section id="faq" className="py-20 px-6 max-w-3xl mx-auto">
           <div className="text-center mb-12 space-y-2">
             <h2 className="text-3xl font-bold text-white">{section.title}</h2>
           </div>
           <div className="space-y-4">
-            {props.items?.map((item: any, i: number) => {
+            {faqItems.map((item: any, i: number) => {
               const isOpen = openFaqIndex === i;
+              const question = item.question || item.q || '';
+              const answer = item.answer || item.a || '';
               return (
                 <div
                   key={i}
@@ -965,12 +1061,12 @@ function renderSectionContent(
                     onClick={() => setOpenFaqIndex(isOpen ? null : i)}
                     className="w-full p-5 text-left font-semibold text-white flex items-center justify-between gap-4"
                   >
-                    <span>{item.question}</span>
+                    <span>{question}</span>
                     <ChevronDown className={`w-5 h-5 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
                     <div className="px-5 pb-5 text-sm text-neutral-400 leading-relaxed border-t border-neutral-800/50 pt-3">
-                      {item.answer}
+                      {answer}
                     </div>
                   )}
                 </div>

@@ -176,6 +176,7 @@ export interface SiteDocument {
   updatedAt: string;
   publishedUrl?: string;
   githubRepo?: string;
+  meta?: Record<string, any>;
 }
 
 export type PatchType =

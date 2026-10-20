@@ -16,6 +16,8 @@ import {
 import { db, SessionRecord } from './storage/db';
 import { GitHubApiClient, validateRepoName } from './github/githubApi';
 import { AiService } from './ai/aiService';
+import { AiRouter } from './ai/router';
+import { supabaseStore } from './storage/supabaseStore';
 
 export const apiRouter = Router();
 
@@ -495,13 +497,13 @@ apiRouter.post('/ai/generate', async (req, res) => {
       return res.status(400).json({ error: 'Missing prompt parameter.' });
     }
 
-    const result = await AiService.generate({
+    const result = await AiRouter.generateSite(
       prompt,
       currentSite,
       selectedModel,
       systemInstructions,
-      clientKeys,
-    });
+      clientKeys
+    );
 
     res.json(result);
   } catch (error: any) {
@@ -517,7 +519,7 @@ apiRouter.post('/ai/test-key', async (req, res) => {
       return res.status(400).json({ error: 'Provider and key are required.' });
     }
 
-    const result = await AiService.testKey(provider, key);
+    const result = await AiRouter.testKey(provider, key);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -636,61 +638,323 @@ apiRouter.post('/ai/generate-media', async (req, res) => {
 });
 
 apiRouter.get('/secrets', (req, res) => {
-  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
-  const hasNemotron = Boolean(process.env.NEMOTRON_API_KEY);
-  const hasKiraCode = Boolean(process.env.KIRA_CODE_API_KEY);
-  const hasKira = Boolean(process.env.KIRA_API_KEY);
-  const config = getServerConfig();
+  const getLast4 = (val?: string) => {
+    if (!val || val.trim().length < 4) return 'none';
+    return val.trim().slice(-4);
+  };
 
-  res.json({
-    secrets: [
-      { name: 'GEMINI_API_KEY', scope: 'App', last4: hasGemini ? 'live' : 'none', status: hasGemini ? 'Working' : 'Untested' },
-      { name: 'NEMOTRON_API_KEY', scope: 'App', last4: hasNemotron ? 'a71b' : 'none', status: hasNemotron ? 'Working' : 'Untested' },
-      { name: 'KIRA_CODE_API_KEY', scope: 'App', last4: hasKiraCode ? 'd4c1' : 'none', status: hasKiraCode ? 'Working' : 'Untested' },
-      { name: 'KIRA_API_KEY', scope: 'App', last4: hasKira ? '89f2' : 'none', status: hasKira ? 'Working' : 'Untested' },
-      { name: 'GITHUB_CLIENT_ID', scope: 'App', last4: config.isGitHubConfigured ? 'auth' : 'none', status: config.isGitHubConfigured ? 'Working' : 'Untested' },
-    ],
-  });
+  const secretsList = [
+    {
+      name: 'KIRA_CODE_API_KEY',
+      category: 'AI key',
+      scope: 'App',
+      last4: getLast4(process.env.KIRA_CODE_API_KEY),
+      status: process.env.KIRA_CODE_API_KEY ? 'Connected' : 'Not connected',
+      note: 'kiraai.vn coding key for DeepSeek V4.1 Flash and GLM 5.1',
+    },
+    {
+      name: 'KIRA_API_KEY',
+      category: 'AI key',
+      scope: 'App',
+      last4: getLast4(process.env.KIRA_API_KEY),
+      status: process.env.KIRA_API_KEY ? 'Connected' : 'Not connected',
+      note: 'kiraai.vn general key for planning, copy, and vision models',
+    },
+    {
+      name: 'NEMOTRON_API_KEY',
+      category: 'AI key',
+      scope: 'App',
+      last4: getLast4(process.env.NEMOTRON_API_KEY),
+      status: process.env.NEMOTRON_API_KEY ? 'Connected' : 'Not connected',
+      note: 'NVIDIA Nemotron 3 Ultra for second-opinion review & architecture',
+    },
+    {
+      name: 'GEMINI_API_KEY',
+      category: 'AI key',
+      scope: 'App',
+      last4: getLast4(process.env.GEMINI_API_KEY),
+      status: process.env.GEMINI_API_KEY ? 'Connected' : 'Not connected',
+      note: 'Google Gemini 2.5/3.8 Flash model key',
+    },
+    {
+      name: 'GITHUB_CLIENT_ID',
+      category: 'GitHub',
+      scope: 'App',
+      last4: getLast4(process.env.GITHUB_CLIENT_ID),
+      status: process.env.GITHUB_CLIENT_ID ? 'Connected' : 'Not connected',
+      note: 'GitHub OAuth App client identifier',
+    },
+    {
+      name: 'SUPABASE_ANON_KEY',
+      category: 'Database',
+      scope: 'App',
+      last4: getLast4(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY),
+      status: (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY) ? 'Connected' : 'Not connected',
+      note: 'Supabase persistence key (project omtpzesyovduuubkosxz)',
+    },
+  ];
+
+  res.json({ secrets: secretsList });
 });
 
-apiRouter.post('/forms', (req, res) => {
-  res.json({
-    success: true,
-    submissionId: `sub-${Date.now()}`,
-    receivedAt: new Date().toISOString(),
-  });
+apiRouter.post('/forms', async (req, res) => {
+  try {
+    const { siteId, name, email, message, ...data } = req.body;
+    const record = {
+      id: `sub-${Date.now()}`,
+      siteId,
+      name,
+      email,
+      message,
+      data,
+      createdAt: new Date().toISOString(),
+    };
+    await supabaseStore.saveSubmission(record);
+    res.json({
+      success: true,
+      submissionId: record.id,
+      receivedAt: record.createdAt,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-apiRouter.post('/bookings', (req, res) => {
-  res.json({
-    success: true,
-    bookingId: `bk-${Date.now()}`,
-    status: 'confirmed',
-    booking: req.body,
-  });
+apiRouter.post('/bookings', async (req, res) => {
+  try {
+    const { siteId, date, time, guests, name, email } = req.body;
+    const record = {
+      id: `bk-${Date.now()}`,
+      siteId,
+      date: date || new Date().toISOString().slice(0, 10),
+      time: time || '19:00',
+      guests: guests ? String(guests) : '2',
+      name: name || 'Guest',
+      email: email || 'guest@example.com',
+      status: 'confirmed' as const,
+      createdAt: new Date().toISOString(),
+    };
+    await supabaseStore.saveBooking(record);
+    res.json({
+      success: true,
+      bookingId: record.id,
+      status: 'confirmed',
+      booking: record,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-apiRouter.post('/orders', (req, res) => {
-  res.json({
-    success: true,
-    orderId: `ord-${Date.now()}`,
-    status: 'paid_test',
-    order: req.body,
-  });
+apiRouter.post('/orders', async (req, res) => {
+  try {
+    const { siteId, items, total, customerName, customerEmail } = req.body;
+    const record = {
+      id: `ord-${Date.now()}`,
+      siteId,
+      items: Array.isArray(items) ? items : [],
+      total: typeof total === 'number' ? total : 0,
+      customerName,
+      customerEmail,
+      status: 'paid' as const,
+      createdAt: new Date().toISOString(),
+    };
+    await supabaseStore.saveOrder(record);
+    res.json({
+      success: true,
+      orderId: record.id,
+      status: 'paid',
+      order: record,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-apiRouter.post('/publish', (req, res) => {
-  const { siteSlug } = req.body;
-  const domain = `${siteSlug || 'site'}.sitehub.live`;
-  res.json({
-    success: true,
-    url: `https://${domain}`,
-    publishedAt: new Date().toISOString(),
-  });
+apiRouter.post('/publish', async (req, res) => {
+  try {
+    const { siteSlug, siteDocument, htmlContent } = req.body;
+    const config = getServerConfig();
+    const slug = (siteSlug || siteDocument?.slug || 'my-site')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const deploymentUrl = `${config.appBaseUrl}/s/${slug}`;
+
+    const record = {
+      id: `dep-${Date.now()}`,
+      siteId: siteDocument?.id || `site-${slug}`,
+      slug,
+      url: deploymentUrl,
+      htmlContent: htmlContent || generateFullHtml(siteDocument),
+      siteDocument: siteDocument || null,
+      publishedAt: new Date().toISOString(),
+    };
+
+    await supabaseStore.saveDeployment(record);
+
+    res.json({
+      success: true,
+      url: deploymentUrl,
+      slug,
+      publishedAt: record.publishedAt,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
+
+apiRouter.get('/s/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const deployment = await supabaseStore.getDeployment(slug);
+    if (!deployment) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Site Not Found — SiteHub</title></head>
+          <body style="font-family: sans-serif; background: #0B0D12; color: #F3F5FA; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+            <div style="text-align: center;">
+              <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">404 — Site Not Found</h1>
+              <p style="color: #A1A8B8;">The site <code>${escapeHtml(slug)}</code> has not been published yet.</p>
+              <a href="/" style="color: #818cf8; text-decoration: none;">Return to SiteHub Studio</a>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' 'unsafe-inline' https: data:; sandbox allow-scripts allow-forms allow-same-origin;"
+    );
+    res.send(deployment.htmlContent);
+  } catch (err: any) {
+    res.status(500).send(`Server error: ${escapeHtml(err.message)}`);
+  }
+});
+
+export function generateFullHtml(site?: any): string {
+  if (!site) return '<html><body><h1>No site content</h1></body></html>';
+  const name = escapeHtml(site.name || 'SiteHub Project');
+  const title = escapeHtml(site.title || name);
+  const desc = escapeHtml(site.description || '');
+  const primaryColor = site.theme?.primaryColor || '#6366f1';
+  const bgColor = site.theme?.backgroundColor || '#09090b';
+  const textColor = site.theme?.textColor || '#fafaf9';
+
+  const sectionsHtml = (site.pages?.[0]?.sections || [])
+    .map((s: any) => {
+      if (s.isHidden) return '';
+      if (s.type === 'navbar') {
+        return `
+          <header class="py-4 px-6 border-b border-neutral-800 flex justify-between items-center max-w-7xl mx-auto">
+            <span class="font-bold text-lg">${escapeHtml(s.props?.brandName || name)}</span>
+            <nav class="flex gap-4 text-sm text-neutral-400">
+              ${(s.props?.links || []).map((l: any) => `<a href="${escapeHtml(l.href || '#')}" class="hover:text-white">${escapeHtml(l.label)}</a>`).join('')}
+            </nav>
+          </header>
+        `;
+      }
+      if (s.type === 'hero') {
+        return `
+          <section class="py-20 px-6 text-center max-w-4xl mx-auto space-y-6">
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight">${escapeHtml(s.title)}</h1>
+            <p class="text-lg text-neutral-400 max-w-2xl mx-auto">${escapeHtml(s.subtitle || '')}</p>
+            <div class="flex justify-center gap-4 pt-4">
+              <a href="#contact" class="px-6 py-3 rounded-xl font-bold text-white shadow-lg" style="background-color: ${primaryColor}">Get Started</a>
+            </div>
+          </section>
+        `;
+      }
+      if (s.type === 'pricing') {
+        const plans = s.props?.plans || s.props?.tiers || [];
+        return `
+          <section id="pricing" class="py-20 px-6 max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-12">${escapeHtml(s.title)}</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+              ${plans.map((p: any) => `
+                <div class="p-8 rounded-3xl bg-neutral-900 border ${p.isPopular ? 'border-indigo-500' : 'border-neutral-800'} space-y-4">
+                  <h3 class="text-xl font-bold">${escapeHtml(p.name)}</h3>
+                  <div class="text-3xl font-extrabold">${escapeHtml(p.price)} <span class="text-xs text-neutral-400 font-normal">${escapeHtml(p.period || '/mo')}</span></div>
+                  <ul class="space-y-2 text-sm text-neutral-300">
+                    ${(p.features || []).map((f: string) => `<li>✓ ${escapeHtml(f)}</li>`).join('')}
+                  </ul>
+                  <button class="w-full py-3 rounded-xl font-bold text-sm bg-neutral-800 hover:bg-neutral-700 text-white">Choose ${escapeHtml(p.name)}</button>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        `;
+      }
+      if (s.type === 'testimonials') {
+        const items = s.props?.items || s.props?.testimonials || [];
+        return `
+          <section class="py-20 px-6 max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-12">${escapeHtml(s.title)}</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+              ${items.map((t: any) => `
+                <div class="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800 space-y-3">
+                  <div class="text-amber-400">★★★★★</div>
+                  <p class="italic text-neutral-300">"${escapeHtml(t.quote)}"</p>
+                  <div class="font-bold text-white text-sm">${escapeHtml(t.author)}</div>
+                  <div class="text-xs text-neutral-400">${escapeHtml(t.title || '')}</div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        `;
+      }
+      if (s.type === 'faq') {
+        const items = s.props?.items || s.props?.faqs || [];
+        return `
+          <section class="py-20 px-6 max-w-3xl mx-auto space-y-4">
+            <h2 class="text-3xl font-bold text-center mb-10">${escapeHtml(s.title)}</h2>
+            ${items.map((q: any) => `
+              <div class="p-5 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2">
+                <h4 class="font-semibold text-white">${escapeHtml(q.question || q.q)}</h4>
+                <p class="text-sm text-neutral-400">${escapeHtml(q.answer || q.a)}</p>
+              </div>
+            `).join('')}
+          </section>
+        `;
+      }
+      return `
+        <section class="py-16 px-6 max-w-6xl mx-auto">
+          <h2 class="text-2xl font-bold mb-4">${escapeHtml(s.title)}</h2>
+          ${s.subtitle ? `<p class="text-neutral-400 text-sm mb-6">${escapeHtml(s.subtitle)}</p>` : ''}
+        </section>
+      `;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html lang="${site.language || 'en'}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <meta name="description" content="${desc}" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: ${bgColor}; color: ${textColor}; }
+  </style>
+</head>
+<body class="antialiased min-h-screen">
+  ${sectionsHtml}
+  <footer class="py-8 px-6 text-center text-xs text-neutral-500 border-t border-neutral-800 mt-20">
+    © ${new Date().getFullYear()} ${name}. Powered by SiteHub.
+  </footer>
+</body>
+</html>`;
+}
 
 function escapeHtml(str: string): string {
-  return str
+  if (!str) return '';
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

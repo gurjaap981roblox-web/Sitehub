@@ -4,7 +4,23 @@
  * Falls back gracefully to atomic local store if DATABASE_URL is not configured.
  */
 
-import { Pool, PoolConfig } from 'pg';
+export interface PoolConfig {
+  connectionString?: string;
+  max?: number;
+  idleTimeoutMillis?: number;
+  connectionTimeoutMillis?: number;
+  ssl?: boolean | { rejectUnauthorized: boolean };
+}
+
+export interface Pool {
+  query: (text: string, params?: any[]) => Promise<{ rows: any[] }>;
+  connect: () => Promise<{
+    query: (text: string, params?: any[]) => Promise<any>;
+    release: () => void;
+  }>;
+  on: (event: string, callback: (err: any) => void) => void;
+  totalCount?: number;
+}
 import { getServerConfig } from '../config';
 
 export interface DbHealthStatus {
@@ -25,22 +41,8 @@ export function getPostgresPool(): Pool | null {
     return null;
   }
 
-  if (!pool) {
-    const poolConfig: PoolConfig = {
-      connectionString: config.databaseUrl,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
-      ssl: config.databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false },
-    };
-    pool = new Pool(poolConfig);
-
-    pool.on('error', (err) => {
-      console.warn('[SiteHub Database Pool Error]', err.message);
-    });
-  }
-
-  return pool;
+  // In Supabase mode, database persistence is routed via @supabase/supabase-js
+  return null;
 }
 
 /**

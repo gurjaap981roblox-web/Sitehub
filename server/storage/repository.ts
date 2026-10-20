@@ -357,7 +357,7 @@ class UniversalRepository {
         }
         q += ' ORDER BY created_at DESC LIMIT 25';
         const res = await pool.query(q, params);
-        return res.rows.map(row => ({
+        return res.rows.map((row: any) => ({
           id: row.id,
           repoFullName: row.repo_full_name,
           commitSha: row.commit_sha,
@@ -410,7 +410,7 @@ class UniversalRepository {
           'SELECT * FROM sitehub_deployments WHERE site_id = $1 ORDER BY created_at DESC LIMIT 20',
           [siteId]
         );
-        return res.rows.map(row => ({
+        return res.rows.map((row: any) => ({
           id: row.id,
           siteId: row.site_id,
           userId: row.user_id,

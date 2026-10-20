@@ -9,6 +9,8 @@ import cookieParser from 'cookie-parser';
 import { apiRouter } from './server/apiRouter';
 import { getServerConfig, validateEnvironmentAtStartup } from './server/config';
 
+import path from 'path';
+
 async function startServer() {
   const app = express();
   const config = getServerConfig();
@@ -26,6 +28,18 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // Canonical GitHub OAuth redirect alias (/api/authgithub/callback -> /api/github/callback)
+  app.get('/api/authgithub/callback', (req, res) => {
+    const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    res.redirect(302, `/api/github/callback${query}`);
+  });
+
+  // Direct sandboxed published site routing
+  app.get('/s/:slug', (req, res, next) => {
+    req.url = `/s/${req.params.slug}`;
+    apiRouter(req, res, next);
+  });
+
   // Attach API routes
   app.use('/api', apiRouter);
 
@@ -40,7 +54,7 @@ async function startServer() {
     });
   });
 
-  // Attach Vite middlewares in development
+  // Attach Vite middlewares in development or static dist in production with SPA fallback
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -49,6 +63,12 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static('dist'));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/s/')) {
+        return next();
+      }
+      res.sendFile(path.resolve(process.cwd(), 'dist', 'index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {

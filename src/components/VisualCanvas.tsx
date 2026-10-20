@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  Boxes,
   Check,
   ChevronDown,
   Eye,
@@ -24,6 +25,8 @@ import {
 } from 'lucide-react';
 import { DeviceMode, LanguageCode, SectionDocument, SectionType, SiteDocument } from '../types/site';
 import { LiveSiteRenderer } from './LiveSiteRenderer';
+import { ComponentLibraryDrawer } from './ComponentLibraryDrawer';
+import { COMPONENT_TEMPLATES } from '../lib/componentLibrary';
 import { translations } from '../lib/translations';
 
 interface VisualCanvasProps {
@@ -49,6 +52,8 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
+  const [isComponentLibraryOpen, setIsComponentLibraryOpen] = useState(true);
+  const [isDraggingComponent, setIsDraggingComponent] = useState(false);
 
   // New Page Modal State
   const [isAddPageOpen, setIsAddPageOpen] = useState(false);
@@ -239,6 +244,21 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
     setIsAddSectionOpen(false);
   };
 
+  // Drag and drop pre-generated component handler
+  const handleDropComponent = (componentId: string, targetIndex: number) => {
+    const template = COMPONENT_TEMPLATES.find(t => t.id === componentId);
+    if (!template || !activePage) return;
+    const cloned = JSON.parse(JSON.stringify(site)) as SiteDocument;
+    const targetPage = cloned.pages.find(p => p.id === activePage.id) || cloned.pages[0];
+    const newSection = template.createSection();
+    targetPage.sections.splice(targetIndex, 0, newSection);
+    cloned.version += 1;
+    cloned.updatedAt = new Date().toISOString();
+    onUpdateSite(cloned);
+    setSelectedSectionId(newSection.id);
+    setIsInspectorOpen(true);
+  };
+
   // Device width mapping
   const deviceWidth =
     deviceMode === 'mobile' ? '375px' : deviceMode === 'tablet' ? '768px' : '100%';
@@ -253,6 +273,20 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
             <span>{activePage?.title || 'Home'}</span>
             <span className="text-[10px] text-neutral-500">/{activePage?.slug}</span>
           </div>
+
+          {/* Component Library Toggle Button */}
+          <button
+            onClick={() => setIsComponentLibraryOpen(!isComponentLibraryOpen)}
+            className={`px-2.5 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1.5 transition-colors border ${
+              isComponentLibraryOpen
+                ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50 shadow-sm'
+                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700/60'
+            }`}
+            title="Toggle AI Component Library Drawer"
+          >
+            <Boxes className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Component Library</span>
+          </button>
 
           <button
             onClick={() => setIsAddSectionOpen(true)}
@@ -299,8 +333,24 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
         </div>
       </div>
 
-      {/* Main Canvas + Inspector Split View */}
+      {/* Main Canvas + Component Library Drawer + Inspector Split View */}
       <div className="flex-1 flex overflow-hidden">
+        {/* Component Library Drawer */}
+        <ComponentLibraryDrawer
+          site={site}
+          activePageId={activePage?.id || 'page-home'}
+          onUpdateSite={onUpdateSite}
+          isOpen={isComponentLibraryOpen}
+          onClose={() => setIsComponentLibraryOpen(false)}
+          selectedSectionId={selectedSectionId}
+          onSelectSection={id => {
+            setSelectedSectionId(id);
+            setIsInspectorOpen(true);
+          }}
+          onDragStartComponent={() => setIsDraggingComponent(true)}
+          onDragEndComponent={() => setIsDraggingComponent(false)}
+        />
+
         {/* Canvas Scrollable Container */}
         <div className="flex-1 overflow-auto p-4 flex justify-center bg-neutral-950/70 relative">
           <div
@@ -323,6 +373,8 @@ export const VisualCanvas: React.FC<VisualCanvasProps> = ({
               }}
               appName={appName}
               isPreview={true}
+              onDropComponent={handleDropComponent}
+              isDraggingComponent={isDraggingComponent}
             />
           </div>
         </div>
